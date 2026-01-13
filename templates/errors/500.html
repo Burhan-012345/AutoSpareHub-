@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}500 - Internal Server Error - AutoSpareHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 text-center">
+            <!-- Error Illustration -->
+            <div class="error-illustration mb-5">
+                <div class="error-icon bg-danger text-white rounded-circle d-inline-flex 
+                            align-items-center justify-content-center mb-4" 
+                     style="width: 120px; height: 120px;">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                </div>
+                <h1 class="display-1 fw-bold text-danger">500</h1>
+                <h2 class="mb-4">Internal Server Error</h2>
+            </div>
+            
+            <!-- Error Message -->
+            <div class="error-content mb-5">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="mb-4">
+                            <i class="fas fa-server fa-3x text-primary mb-4"></i>
+                            <h3 class="mb-3">Oops! Something went wrong on our end.</h3>
+                            <p class="lead text-muted">
+                                We're experiencing some technical difficulties. 
+                                Our team has been notified and is working to fix the issue.
+                            </p>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="fas fa-redo fa-2x text-primary mb-3"></i>
+                                        <h5>Try Again</h5>
+                                        <p class="text-muted small">
+                                            The issue might be temporary. Try refreshing the page.
+                                        </p>
+                                        <button class="btn btn-outline-primary" onclick="window.location.reload()">
+                                            <i class="fas fa-sync-alt me-2"></i>Refresh Page
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-0 bg-light">
+                                    <div class="card-body">
+                                        <i class="fas fa-home fa-2x text-primary mb-3"></i>
+                                        <h5>Go Home</h5>
+                                        <p class="text-muted small">
+                                            Return to the homepage and continue shopping.
+                                        </p>
+                                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                            <i class="fas fa-home me-2"></i>Homepage
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Support Information -->
+            <div class="support-info mb-5">
+                <div class="card border-0 bg-primary text-white">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h4 class="mb-2">Need Immediate Assistance?</h4>
+                                <p class="mb-0 opacity-75">
+                                    Contact our support team for help with this error.
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <a href="{{ url_for('contact') }}" class="btn btn-light">
+                                    <i class="fas fa-headset me-2"></i>Contact Support
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Troubleshooting Tips -->
+            <div class="troubleshooting-tips mb-5">
+                <h4 class="mb-4">Troubleshooting Tips</h4>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-primary rounded-circle d-flex align-items-center 
+                                             justify-content-center" style="width: 40px; height: 40px;">
+                                    1
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6>Clear Browser Cache</h6>
+                                <p class="text-muted small mb-0">
+                                    Clear your browser cache and cookies, then try again.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-primary rounded-circle d-flex align-items-center 
+                                             justify-content-center" style="width: 40px; height: 40px;">
+                                    2
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6>Try Different Browser</h6>
+                                <p class="text-muted small mb-0">
+                                    Switch to a different web browser and check if the issue persists.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <span class="badge bg-primary rounded-circle d-flex align-items-center 
+                                             justify-content-center" style="width: 40px; height: 40px;">
+                                    3
+                                </span>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6>Check Internet Connection</h6>
+                                <p class="text-muted small mb-0">
+                                    Ensure you have a stable internet connection.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Details (For Developers) -->
+            <div class="error-details mt-5">
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#errorDetails">
+                    <i class="fas fa-code me-2"></i>Technical Details
+                </button>
+                
+                <div class="collapse mt-3" id="errorDetails">
+                    <div class="card card-body bg-dark text-light">
+                        <pre class="mb-0" style="font-size: 12px;">
+{% if error %}
+Error: {{ error.__class__.__name__ }}
+Message: {{ error }}
+Time: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+URL: {{ request.url }}
+Method: {{ request.method }}
+{% else %}
+Error details are not available in production mode.
+{% endif %}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .error-illustration {
+        animation: bounceIn 1s ease-out;
+    }
+    
+    .error-icon {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes bounceIn {
+        0% {
+            transform: scale(0.3);
+            opacity: 0;
+        }
+        50% {
+            transform: scale(1.05);
+        }
+        70% {
+            transform: scale(0.9);
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+        }
+        70% {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        }
+    }
+    
+    .troubleshooting-tips .badge {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    .error-details pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
+
+<script>
+    // Auto-refresh after 30 seconds
+    setTimeout(() => {
+        const refreshBtn = document.createElement('button');
+        refreshBtn.className = 'btn btn-warning mt-3';
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Auto-refresh in 5 seconds';
+        refreshBtn.onclick = () => window.location.reload();
+        
+        const container = document.querySelector('.error-content');
+        if (container) {
+            container.appendChild(refreshBtn);
+            
+            // Countdown
+            let count = 5;
+            const interval = setInterval(() => {
+                refreshBtn.innerHTML = `<i class="fas fa-sync-alt me-2"></i>Auto-refresh in ${count} seconds`;
+                count--;
+                
+                if (count < 0) {
+                    clearInterval(interval);
+                    window.location.reload();
+                }
+            }, 1000);
+        }
+    }, 30000);
+    
+    // Send error report
+    document.addEventListener('DOMContentLoaded', function() {
+        const reportBtn = document.createElement('button');
+        reportBtn.className = 'btn btn-outline-danger ms-2';
+        reportBtn.innerHTML = '<i class="fas fa-bug me-2"></i>Report Error';
+        reportBtn.onclick = reportError;
+        
+        document.querySelector('.error-details').appendChild(reportBtn);
+    });
+    
+    async function reportError() {
+        const errorData = {
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            timestamp: new Date().toISOString(),
+            error: '500 Internal Server Error'
+        };
+        
+        try {
+            const response = await fetch('/api/report-error', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(errorData)
+            });
+            
+            if (response.ok) {
+                alert('Error report sent successfully. Thank you!');
+            } else {
+                alert('Failed to send error report. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error reporting failed:', error);
+            alert('Failed to send error report. Please try again.');
+        }
+    }
+</script>
+{% endblock %}
