@@ -1,0 +1,307 @@
+<div class="card product-card h-100 border-0 shadow-sm">
+    <!-- Product Image -->
+    <div class="product-image-container position-relative">
+        <a href="{{ url_for('shop.product_detail', slug=product.slug) }}">
+            <img src="{{ product.primary_image }}" 
+                 alt="{{ product.name }}"
+                 class="card-img-top product-image"
+                 loading="lazy">
+        </a>
+        
+        <!-- Product Badges -->
+        <div class="product-badges position-absolute top-0 start-0 p-2">
+            {% if product.discount > 0 %}
+            <span class="badge bg-danger product-badge">-{{ product.discount }}%</span>
+            {% endif %}
+            {% if product.stock_quantity <= 10 and product.stock_quantity > 0 %}
+            <span class="badge bg-warning product-badge">Low Stock</span>
+            {% elif product.stock_quantity == 0 %}
+            <span class="badge bg-secondary product-badge">Out of Stock</span>
+            {% endif %}
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="product-actions position-absolute top-0 end-0 p-2">
+            <button class="btn btn-sm btn-light wishlist-btn {% if in_wishlist %}active{% endif %}" 
+                    data-product-id="{{ product.id }}"
+                    title="Add to Wishlist">
+                {% if in_wishlist %}
+                <i class="fas fa-heart text-danger"></i>
+                {% else %}
+                <i class="far fa-heart"></i>
+                {% endif %}
+            </button>
+        </div>
+    </div>
+    
+    <!-- Product Body -->
+    <div class="card-body d-flex flex-column">
+        <!-- Category -->
+        {% if product.category %}
+        <small class="text-muted mb-1">
+            <a href="{{ url_for('shop.category', slug=product.category.slug) }}" 
+               class="text-decoration-none">
+                {{ product.category.name }}
+            </a>
+        </small>
+        {% endif %}
+        
+        <!-- Product Name -->
+        <h6 class="card-title product-title mb-2">
+            <a href="{{ url_for('shop.product_detail', slug=product.slug) }}" 
+               class="text-decoration-none text-dark">
+                {{ product.name|truncate(50) }}
+            </a>
+        </h6>
+        
+        <!-- Part Number -->
+        <small class="text-muted mb-2 d-block">
+            Part #: {{ product.part_number }}
+        </small>
+        
+        <!-- Vehicle Info -->
+        {% if product.vehicle_brand or product.vehicle_model %}
+        <div class="vehicle-info mb-2">
+            <small class="text-primary">
+                {% if product.vehicle_brand %}
+                <i class="fas fa-car me-1"></i>{{ product.vehicle_brand.name }}
+                {% endif %}
+                {% if product.vehicle_model %}
+                | {{ product.vehicle_model.name }}
+                {% endif %}
+            </small>
+        </div>
+        {% endif %}
+        
+        <!-- Price -->
+        <div class="product-price mb-3">
+            <span class="h5 text-primary fw-bold">₹{{ "%.2f"|format(product.discounted_price) }}</span>
+            {% if product.discount > 0 %}
+            <small class="text-muted text-decoration-line-through ms-1">
+                ₹{{ "%.2f"|format(product.price) }}
+            </small>
+            {% endif %}
+        </div>
+        
+        <!-- Stock Status -->
+        <div class="stock-status mb-3">
+            {% if product.is_in_stock %}
+                {% if product.stock_quantity <= 10 %}
+                <small class="text-warning">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Only {{ product.stock_quantity }} left
+                </small>
+                {% else %}
+                <small class="text-success">
+                    <i class="fas fa-check-circle me-1"></i>
+                    In Stock
+                </small>
+                {% endif %}
+            {% else %}
+                <small class="text-danger">
+                    <i class="fas fa-times-circle me-1"></i>
+                    Out of Stock
+                </small>
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="product-actions mt-auto">
+            <div class="d-grid gap-2">
+                {% if product.is_in_stock %}
+                <button class="btn btn-primary btn-sm add-to-cart" 
+                        data-product-id="{{ product.id }}">
+                    <i class="fas fa-shopping-cart me-1"></i>Add to Cart
+                </button>
+                {% else %}
+                <button class="btn btn-outline-secondary btn-sm" disabled>
+                    <i class="fas fa-bell me-1"></i>Notify Me
+                </button>
+                {% endif %}
+                <a href="{{ url_for('shop.product_detail', slug=product.slug) }}" 
+                   class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye me-1"></i>View Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .product-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    
+    .product-image {
+        height: 200px;
+        object-fit: contain;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .product-title {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        min-height: 40px;
+    }
+    
+    .product-title a:hover {
+        color: #0A1F44 !important;
+    }
+    
+    .product-badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        margin-right: 5px;
+    }
+    
+    .wishlist-btn.active {
+        background: #fff;
+    }
+    
+    .wishlist-btn.active i {
+        color: #dc3545;
+    }
+</style>
+
+<script>
+    // Wishlist functionality
+    document.querySelectorAll('.wishlist-btn').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const productId = this.dataset.productId;
+            const isInWishlist = this.classList.contains('active');
+            
+            try {
+                const url = isInWishlist ? 
+                    `/wishlist/remove/${productId}` : 
+                    `/wishlist/add/${productId}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (isInWishlist) {
+                        this.classList.remove('active');
+                        this.innerHTML = '<i class="far fa-heart"></i>';
+                        showNotification('Removed from wishlist', 'info');
+                    } else {
+                        this.classList.add('active');
+                        this.innerHTML = '<i class="fas fa-heart text-danger"></i>';
+                        showNotification('Added to wishlist', 'success');
+                    }
+                } else {
+                    showNotification(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Wishlist error:', error);
+                showNotification('Failed to update wishlist', 'error');
+            }
+        });
+    });
+    
+    // Add to cart functionality
+    document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const productId = this.dataset.productId;
+            
+            // Show loading
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+            
+            try {
+                const response = await fetch('/cart/add/' + productId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: 'quantity=1'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update cart count
+                    updateCartCount(data.cart_count);
+                    
+                    // Show success animation
+                    this.classList.add('cart-add-animation');
+                    showNotification('Product added to cart!', 'success');
+                    
+                    // Reset button
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                        this.classList.remove('cart-add-animation');
+                    }, 500);
+                } else {
+                    showNotification(data.message, 'error');
+                    this.innerHTML = originalText;
+                    this.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                showNotification('Failed to add to cart', 'error');
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }
+        });
+    });
+    
+    // Helper functions
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} notification-slide`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    function updateCartCount(count) {
+        const cartBadge = document.querySelector('.cart-count');
+        const cartLink = document.querySelector('.cart-badge');
+        
+        if (count > 0) {
+            if (cartBadge) {
+                cartBadge.textContent = count;
+            } else if (cartLink) {
+                const badge = document.createElement('span');
+                badge.className = 'cart-count';
+                badge.textContent = count;
+                cartLink.appendChild(badge);
+            }
+        } else if (cartBadge) {
+            cartBadge.remove();
+        }
+    }
+</script>

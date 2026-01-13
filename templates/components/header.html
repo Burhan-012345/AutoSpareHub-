@@ -1,0 +1,582 @@
+<!-- Header Component -->
+<header>
+    <!-- Top Bar -->
+    <div class="top-bar bg-primary text-white py-2 d-none d-lg-block">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-phone-alt me-2"></i>
+                        <span class="me-4">+1 (555) 123-4567</span>
+                        <i class="fas fa-envelope me-2"></i>
+                        <span>support@autosparehub.com</span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="d-flex justify-content-end align-items-center">
+                        <!-- Currency Selector -->
+                        <div class="dropdown me-3">
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-rupee-sign me-1"></i> INR
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-rupee-sign me-2"></i>INR</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-dollar-sign me-2"></i>USD</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-euro-sign me-2"></i>EUR</a></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Language Selector -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" 
+                                    data-bs-toggle="dropdown">
+                                <i class="fas fa-globe me-1"></i> English
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-language me-2"></i>English</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-language me-2"></i>Hindi</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-language me-2"></i>Spanish</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Header -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+        <div class="container">
+            <!-- Brand Logo -->
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                <div class="logo-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                     style="width: 40px; height: 40px;">
+                    <i class="fas fa-car"></i>
+                </div>
+                <div>
+                    <span class="fw-bold fs-4 text-primary">Auto</span>
+                    <span class="fw-bold fs-4 text-secondary">SpareHub</span>
+                </div>
+            </a>
+            
+            <!-- Mobile Cart & Menu Toggle -->
+            <div class="d-flex align-items-center d-lg-none">
+                <!-- Cart -->
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('cart.view_cart') }}" class="nav-link cart-badge me-3">
+                    <i class="fas fa-shopping-cart fa-lg"></i>
+                    {% if current_user.get_cart_count() > 0 %}
+                    <span class="cart-count">{{ current_user.get_cart_count() }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+                
+                <!-- Mobile Toggle -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+            
+            <!-- Navigation Links -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
+                           href="{{ url_for('index') }}">
+                            <i class="fas fa-home me-1"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'shop' in request.endpoint %}active{% endif %}" 
+                           href="{{ url_for('shop.products') }}">
+                            <i class="fas fa-box-open me-1"></i> Shop
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-car me-1"></i> Vehicles
+                        </a>
+                        <ul class="dropdown-menu">
+                            {% for brand in vehicle_brands|default([]) %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('shop.products', brand_id=brand.id) }}">
+                                    <i class="fas fa-car me-2"></i>{{ brand.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('shop.index') }}">
+                                    <i class="fas fa-list me-2"></i>All Brands
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('shop.index') }}">
+                            <i class="fas fa-star me-1"></i> Featured
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">
+                            <i class="fas fa-info-circle me-1"></i> About
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('contact') }}">
+                            <i class="fas fa-phone me-1"></i> Contact
+                        </a>
+                    </li>
+                </ul>
+                
+                <!-- Search Form -->
+                <form class="d-flex me-3" action="{{ url_for('shop.search') }}" method="GET">
+                    <div class="input-group search-box">
+                        <input type="text" class="form-control" 
+                               placeholder="Search parts by name or number..." 
+                               name="q" value="{{ request.args.get('q', '') }}"
+                               aria-label="Search">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- User Actions -->
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                        <!-- Cart (Desktop) -->
+                        <li class="nav-item d-none d-lg-block">
+                            <a class="nav-link cart-badge position-relative" href="{{ url_for('cart.view_cart') }}">
+                                <i class="fas fa-shopping-cart fa-lg"></i>
+                                {% if current_user.get_cart_count() > 0 %}
+                                <span class="cart-count">{{ current_user.get_cart_count() }}</span>
+                                {% endif %}
+                            </a>
+                        </li>
+                        
+                        <!-- Wishlist -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('user.wishlist') }}">
+                                <i class="fas fa-heart fa-lg"></i>
+                            </a>
+                        </li>
+                        
+                        <!-- Notifications -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-bell fa-lg position-relative">
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        3
+                                        <span class="visually-hidden">unread notifications</span>
+                                    </span>
+                                </i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
+                                <li class="dropdown-header">
+                                    <strong>Notifications</strong>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#">
+                                        <div class="d-flex">
+                                            <div class="notification-icon bg-success text-white rounded-circle me-3">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">Order Shipped</h6>
+                                                <small class="text-muted">Your order #ASH-20231215-ABC123 has been shipped</small>
+                                                <small class="text-muted d-block">2 hours ago</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#">
+                                        <div class="d-flex">
+                                            <div class="notification-icon bg-primary text-white rounded-circle me-3">
+                                                <i class="fas fa-tag"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0">Special Offer</h6>
+                                                <small class="text-muted">Get 20% off on engine parts</small>
+                                                <small class="text-muted d-block">1 day ago</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-center" href="{{ url_for('user.notifications') }}">
+                                        View All Notifications
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        
+                        <!-- User Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                               role="button" data-bs-toggle="dropdown">
+                                <div class="user-avatar bg-primary text-white rounded-circle d-flex 
+                                            align-items-center justify-content-center me-2" 
+                                     style="width: 32px; height: 32px;">
+                                    {{ current_user.name[0]|upper }}
+                                </div>
+                                <span class="d-none d-md-inline">{{ current_user.name.split()[0] }}</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li class="dropdown-header">
+                                    <strong>{{ current_user.name }}</strong>
+                                    <small class="text-muted d-block">{{ current_user.email }}</small>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.profile') }}">
+                                        <i class="fas fa-user me-2"></i> Profile
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.orders') }}">
+                                        <i class="fas fa-receipt me-2"></i> Orders
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.addresses') }}">
+                                        <i class="fas fa-address-book me-2"></i> Addresses
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.wishlist') }}">
+                                        <i class="fas fa-heart me-2"></i> Wishlist
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% if current_user.is_admin() %}
+                                <li>
+                                    <a class="dropdown-item text-primary" href="{{ url_for('admin.dashboard') }}">
+                                        <i class="fas fa-cog me-2"></i> Admin Panel
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <!-- Login/Register -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">
+                                <i class="fas fa-sign-in-alt me-1"></i> Login
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary ms-2" href="{{ url_for('auth.register') }}">
+                                <i class="fas fa-user-plus me-1"></i> Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Category Bar -->
+    <div class="category-bar bg-light py-2 d-none d-lg-block">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="category-nav">
+                    <ul class="nav">
+                        {% for category in categories|default([])[:8] %}
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="{{ url_for('shop.category', slug=category.slug) }}">
+                                <i class="fas fa-cog me-1"></i>{{ category.name }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                        <li class="nav-item">
+                            <a class="nav-link text-primary" href="{{ url_for('shop.products') }}">
+                                <i class="fas fa-ellipsis-h me-1"></i>More
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="special-offer">
+                    <span class="badge bg-danger">
+                        <i class="fas fa-bolt me-1"></i>FLASH SALE: 25% OFF
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<style>
+    /* Header Styles */
+    .top-bar {
+        font-size: 0.875rem;
+    }
+    
+    .logo-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    .navbar-brand:hover .logo-icon {
+        transform: rotate(15deg);
+    }
+    
+    .nav-link {
+        font-weight: 500;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-link:hover {
+        color: #FF8C00 !important;
+    }
+    
+    .nav-link.active {
+        color: #FF8C00 !important;
+        position: relative;
+    }
+    
+    .nav-link.active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 1rem;
+        right: 1rem;
+        height: 2px;
+        background: #FF8C00;
+        border-radius: 2px;
+    }
+    
+    .cart-badge {
+        position: relative;
+    }
+    
+    .cart-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #FF8C00;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .search-box {
+        width: 300px;
+    }
+    
+    .search-box .form-control {
+        border-radius: 20px 0 0 20px;
+        border: 1px solid #dee2e6;
+        padding-left: 20px;
+    }
+    
+    .search-box .btn {
+        border-radius: 0 20px 20px 0;
+    }
+    
+    .user-avatar {
+        font-weight: 600;
+    }
+    
+    .notification-dropdown {
+        min-width: 350px;
+    }
+    
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .category-bar {
+        border-top: 1px solid #dee2e6;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .category-bar .nav-link {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.75rem !important;
+    }
+    
+    .category-bar .nav-link:hover {
+        color: #0A1F44 !important;
+    }
+    
+    @media (max-width: 992px) {
+        .search-box {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .notification-dropdown {
+            min-width: 300px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .category-bar {
+            display: none;
+        }
+        
+        .navbar-collapse {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-top: 10px;
+        }
+    }
+    
+    /* Sticky header animation */
+    .sticky-top {
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script>
+    // Search autocomplete
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.querySelector('input[name="q"]');
+        if (searchInput) {
+            let timeout;
+            
+            searchInput.addEventListener('input', function() {
+                clearTimeout(timeout);
+                
+                const query = this.value.trim();
+                if (query.length < 2) return;
+                
+                timeout = setTimeout(async () => {
+                    try {
+                        const response = await fetch(`/api/search/suggest?q=${encodeURIComponent(query)}`);
+                        const suggestions = await response.json();
+                        
+                        // Create or update autocomplete dropdown
+                        showSearchSuggestions(suggestions, query);
+                    } catch (error) {
+                        console.error('Search error:', error);
+                    }
+                }, 300);
+            });
+            
+            // Close suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-box')) {
+                    hideSearchSuggestions();
+                }
+            });
+        }
+    });
+    
+    function showSearchSuggestions(suggestions, query) {
+        // Remove existing suggestions
+        hideSearchSuggestions();
+        
+        if (suggestions.length === 0) return;
+        
+        const searchBox = document.querySelector('.search-box');
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'search-suggestions';
+        suggestionsDiv.innerHTML = `
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        ${suggestions.map(item => `
+                            <a href="${item.url}" class="list-group-item list-group-item-action">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <img src="${item.image}" alt="${item.name}" 
+                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">${highlightText(item.name, query)}</h6>
+                                        <small class="text-muted">Part #: ${item.part_number}</small>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <span class="badge bg-primary">₹${item.price}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        suggestionsDiv.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            margin-top: 5px;
+        `;
+        
+        searchBox.style.position = 'relative';
+        searchBox.appendChild(suggestionsDiv);
+    }
+    
+    function hideSearchSuggestions() {
+        const suggestions = document.querySelector('.search-suggestions');
+        if (suggestions) {
+            suggestions.remove();
+        }
+    }
+    
+    function highlightText(text, query) {
+        const regex = new RegExp(`(${query})`, 'gi');
+        return text.replace(regex, '<span class="text-primary fw-bold">$1</span>');
+    }
+    
+    // Update cart count dynamically
+    function updateCartCount(count) {
+        const cartBadge = document.querySelector('.cart-count');
+        const cartLink = document.querySelector('.cart-badge');
+        
+        if (count > 0) {
+            if (cartBadge) {
+                cartBadge.textContent = count;
+            } else if (cartLink) {
+                const badge = document.createElement('span');
+                badge.className = 'cart-count';
+                badge.textContent = count;
+                cartLink.appendChild(badge);
+            }
+        } else if (cartBadge) {
+            cartBadge.remove();
+        }
+    }
+    
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
