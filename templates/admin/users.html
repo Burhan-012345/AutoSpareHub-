@@ -1,0 +1,821 @@
+{% extends "admin/base.html" %}
+
+{% block title %}User Management - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">User Management</h1>
+            <p class="text-muted mb-0">Manage customer accounts and permissions</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                <i class="fas fa-user-plus me-2"></i>Add New User
+            </button>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 bg-primary bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Total Users</h6>
+                            <h3 class="mb-0">{{ users.total }}</h3>
+                        </div>
+                        <div class="avatar-sm">
+                            <div class="avatar-title bg-primary rounded-circle">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 bg-success bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Active Users</h6>
+                            <h3 class="mb-0">{{ users.items|selectattr('is_active', 'equalto', true)|list|length }}</h3>
+                        </div>
+                        <div class="avatar-sm">
+                            <div class="avatar-title bg-success rounded-circle">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">New This Month</h6>
+                            <h3 class="mb-0">{{ users.items|selectattr('created_at', 'month_filter')|list|length }}</h3>
+                        </div>
+                        <div class="avatar-sm">
+                            <div class="avatar-title bg-warning rounded-circle">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 bg-info bg-opacity-10">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted mb-2">Admin Users</h6>
+                            <h3 class="mb-0">{{ users.items|selectattr('role', 'equalto', 'admin')|list|length }}</h3>
+                        </div>
+                        <div class="avatar-sm">
+                            <div class="avatar-title bg-info rounded-circle">
+                                <i class="fas fa-user-shield"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search and Filter Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="searchUsers" 
+                               placeholder="Search by name, email, phone...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="roleFilter">
+                        <option value="">All Roles</option>
+                        <option value="admin">Admin</option>
+                        <option value="customer">Customer</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Users Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                </div>
+                            </th>
+                            <th>User</th>
+                            <th>Contact</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Orders</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users.items %}
+                        <tr data-user-id="{{ user.id }}">
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input user-checkbox" 
+                                           type="checkbox" value="{{ user.id }}">
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar-xs">
+                                            {% if user.avatar %}
+                                            <img src="{{ user.avatar }}" alt="{{ user.name }}" 
+                                                 class="rounded-circle" style="width: 32px; height: 32px;">
+                                            {% else %}
+                                            <div class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle">
+                                                {{ user.name[0]|upper }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <h6 class="mb-0">{{ user.name }}</h6>
+                                        <small class="text-muted">ID: U{{ user.id|string|rjust(6, '0') }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="contact-info">
+                                    <div class="mb-1">
+                                        <i class="fas fa-envelope me-1 text-muted"></i>
+                                        <small>{{ user.email }}</small>
+                                    </div>
+                                    {% if user.phone %}
+                                    <div>
+                                        <i class="fas fa-phone me-1 text-muted"></i>
+                                        <small>{{ user.phone }}</small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if user.role == 'admin' %}danger{% else %}primary{% endif %}">
+                                    {{ user.role|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if user.is_active %}success{% else %}secondary{% endif %}">
+                                    {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted d-block">{{ user.created_at.strftime('%d %b, %Y') }}</small>
+                                <small class="text-muted">{{ user.created_at|timesince }}</small>
+                            </td>
+                            <td>
+                                <div class="text-center">
+                                    <span class="fw-semibold">{{ user.orders|length }}</span>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        <div class="progress-bar" style="width: {{ (user.orders|length / 10 * 100)|min(100) }}%"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="viewUserDetails('{{ user.id }}')">
+                                                <i class="fas fa-eye me-2"></i>View Details
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="editUser('{{ user.id }}')">
+                                                <i class="fas fa-edit me-2"></i>Edit User
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% if user.role == 'customer' %}
+                                        <li>
+                                            <a class="dropdown-item text-warning" href="#"
+                                               onclick="makeAdmin('{{ user.id }}')">
+                                                <i class="fas fa-user-shield me-2"></i>Make Admin
+                                            </a>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item text-info" href="#"
+                                               onclick="makeCustomer('{{ user.id }}')">
+                                                <i class="fas fa-user me-2"></i>Make Customer
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        {% if user.is_active %}
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                               onclick="deactivateUser('{{ user.id }}')">
+                                                <i class="fas fa-user-slash me-2"></i>Deactivate
+                                            </a>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item text-success" href="#"
+                                               onclick="activateUser('{{ user.id }}')">
+                                                <i class="fas fa-user-check me-2"></i>Activate
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                               onclick="deleteUser('{{ user.id }}')">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Bulk Actions -->
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <select class="form-select form-select-sm me-2" style="width: auto;" 
+                                id="bulkAction">
+                            <option value="">Bulk Actions</option>
+                            <option value="activate">Activate Selected</option>
+                            <option value="deactivate">Deactivate Selected</option>
+                            <option value="make_admin">Make Admin</option>
+                            <option value="make_customer">Make Customer</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                        <button class="btn btn-sm btn-primary" onclick="applyBulkAction()">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="col-md-6">
+                    <nav aria-label="Page navigation" class="float-end">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if users.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.users', page=users.prev_num, **request.args) }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page in users.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+                                {% if page %}
+                                    <li class="page-item {% if page == users.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin.users', page=page, **request.args) }}">
+                                            {{ page }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if users.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.users', page=users.next_num, **request.args) }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <div class="text-muted text-end mt-1">
+                            Showing {{ users.items|length }} of {{ users.total }} users
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Full Name *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Role *</label>
+                            <select class="form-select" name="role" required>
+                                <option value="customer">Customer</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" id="password" required>
+                            <div class="password-strength mt-2">
+                                <small>Strength: <span id="password-strength" class="badge bg-secondary">None</span></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirm Password *</label>
+                            <input type="password" class="form-control" name="confirm_password" required>
+                            <small id="password-match" class="text-muted"></small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="send_welcome_email" id="sendWelcomeEmail" checked>
+                            <label class="form-check-label" for="sendWelcomeEmail">
+                                Send welcome email to user
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
+                            <label class="form-check-label" for="isActive">
+                                Account is active
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Details Modal -->
+<div class="modal fade" id="userDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-xs {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .avatar-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+    }
+    
+    .contact-info {
+        font-size: 0.875rem;
+    }
+    
+    .user-checkbox:checked {
+        background-color: #0A1F44;
+        border-color: #0A1F44;
+    }
+    
+    .progress {
+        width: 60px;
+        margin: 0 auto;
+    }
+</style>
+
+<script>
+    // Filter users table
+    function applyFilters() {
+        const search = document.getElementById('searchUsers').value.toLowerCase();
+        const role = document.getElementById('roleFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        const rows = document.querySelectorAll('#usersTable tbody tr');
+        
+        rows.forEach(row => {
+            const name = row.cells[1].textContent.toLowerCase();
+            const email = row.cells[2].textContent.toLowerCase();
+            const rowRole = row.cells[3].textContent.toLowerCase().trim();
+            const rowStatus = row.cells[4].textContent.toLowerCase().trim();
+            
+            let show = true;
+            
+            // Search filter
+            if (search && !name.includes(search) && !email.includes(search)) {
+                show = false;
+            }
+            
+            // Role filter
+            if (role && rowRole !== role) {
+                show = false;
+            }
+            
+            // Status filter
+            if (status) {
+                const statusMap = { 'active': 'active', 'inactive': 'inactive' };
+                if (rowStatus !== statusMap[status]) {
+                    show = false;
+                }
+            }
+            
+            row.style.display = show ? '' : 'none';
+        });
+    }
+    
+    // Select all checkbox
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.user-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+    
+    // Bulk actions
+    function applyBulkAction() {
+        const action = document.getElementById('bulkAction').value;
+        const selectedUsers = [];
+        
+        document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
+            selectedUsers.push(cb.value);
+        });
+        
+        if (selectedUsers.length === 0) {
+            alert('Please select at least one user.');
+            return;
+        }
+        
+        if (!action) {
+            alert('Please select an action.');
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to ${action.replace('_', ' ')} ${selectedUsers.length} user(s)?`)) {
+            switch(action) {
+                case 'activate':
+                    updateUserStatus(selectedUsers, true);
+                    break;
+                case 'deactivate':
+                    updateUserStatus(selectedUsers, false);
+                    break;
+                case 'make_admin':
+                    updateUserRole(selectedUsers, 'admin');
+                    break;
+                case 'make_customer':
+                    updateUserRole(selectedUsers, 'customer');
+                    break;
+                case 'delete':
+                    deleteUsers(selectedUsers);
+                    break;
+            }
+        }
+    }
+    
+    // Update user status
+    async function updateUserStatus(userIds, isActive) {
+        try {
+            const response = await fetch('/admin/users/bulk-update-status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    user_ids: userIds,
+                    is_active: isActive
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`Updated ${userIds.length} user(s)`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating users:', error);
+            showNotification('Failed to update users', 'error');
+        }
+    }
+    
+    // Update user role
+    async function updateUserRole(userIds, role) {
+        try {
+            const response = await fetch('/admin/users/bulk-update-role', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    user_ids: userIds,
+                    role: role
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`Updated ${userIds.length} user(s) to ${role}`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating user roles:', error);
+            showNotification('Failed to update user roles', 'error');
+        }
+    }
+    
+    // Delete users
+    async function deleteUsers(userIds) {
+        if (!confirm('This action cannot be undone. Delete selected users?')) return;
+        
+        try {
+            const response = await fetch('/admin/users/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    user_ids: userIds
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`Deleted ${userIds.length} user(s)`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting users:', error);
+            showNotification('Failed to delete users', 'error');
+        }
+    }
+    
+    // Individual user actions
+    function viewUserDetails(userId) {
+        fetch(`/admin/users/${userId}/details`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('userDetailsContent').innerHTML = html;
+                const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error loading user details:', error);
+                showNotification('Failed to load user details', 'error');
+            });
+    }
+    
+    function editUser(userId) {
+        // In a real implementation, this would open an edit form
+        alert('Edit user functionality would open here');
+    }
+    
+    function makeAdmin(userId) {
+        if (confirm('Make this user an administrator?')) {
+            updateUserRole([userId], 'admin');
+        }
+    }
+    
+    function makeCustomer(userId) {
+        if (confirm('Change this user to customer role?')) {
+            updateUserRole([userId], 'customer');
+        }
+    }
+    
+    function activateUser(userId) {
+        updateUserStatus([userId], true);
+    }
+    
+    function deactivateUser(userId) {
+        updateUserStatus([userId], false);
+    }
+    
+    function deleteUser(userId) {
+        if (confirm('Delete this user? This action cannot be undone.')) {
+            deleteUsers([userId]);
+        }
+    }
+    
+    // Add new user
+    function submitAddUser() {
+        const form = document.getElementById('addUserForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+        
+        // Validate password
+        if (data.password !== data.confirm_password) {
+            alert('Passwords do not match!');
+            return;
+        }
+        
+        if (data.password.length < 8) {
+            alert('Password must be at least 8 characters long!');
+            return;
+        }
+        
+        // Submit form
+        fetch('/admin/users/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('User created successfully', 'success');
+                document.getElementById('addUserModal').querySelector('.btn-close').click();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error creating user:', error);
+            showNotification('Failed to create user', 'error');
+        });
+    }
+    
+    // Password strength checker
+    document.getElementById('password')?.addEventListener('input', function() {
+        const password = this.value;
+        let strength = 0;
+        
+        // Length check
+        if (password.length >= 8) strength++;
+        if (password.length >= 12) strength++;
+        
+        // Complexity checks
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        // Update indicator
+        const strengthText = ['None', 'Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+        const strengthClass = ['secondary', 'danger', 'danger', 'warning', 'info', 'success'];
+        
+        const indicator = document.getElementById('password-strength');
+        if (indicator) {
+            indicator.textContent = strengthText[strength];
+            indicator.className = `badge bg-${strengthClass[strength]}`;
+        }
+    });
+    
+    // Password match checker
+    const confirmPassword = document.querySelector('input[name="confirm_password"]');
+    const password = document.getElementById('password');
+    
+    if (confirmPassword && password) {
+        confirmPassword.addEventListener('input', function() {
+            const matchIndicator = document.getElementById('password-match');
+            if (matchIndicator) {
+                if (this.value === password.value) {
+                    matchIndicator.textContent = '✓ Passwords match';
+                    matchIndicator.className = 'text-success';
+                } else {
+                    matchIndicator.textContent = '✗ Passwords do not match';
+                    matchIndicator.className = 'text-danger';
+                }
+            }
+        });
+    }
+    
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    // Initialize filters from URL
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('role')) {
+            document.getElementById('roleFilter').value = urlParams.get('role');
+        }
+        
+        if (urlParams.has('status')) {
+            document.getElementById('statusFilter').value = urlParams.get('status');
+        }
+        
+        if (urlParams.has('q')) {
+            document.getElementById('searchUsers').value = urlParams.get('q');
+        }
+        
+        // Apply filters on page load
+        if (urlParams.has('role') || urlParams.has('status') || urlParams.has('q')) {
+            setTimeout(applyFilters, 100);
+        }
+    });
+</script>
+{% endblock %}

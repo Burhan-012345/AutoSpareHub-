@@ -1,0 +1,876 @@
+{% extends "base.html" %}
+
+{% block title %}Product Management - AutoSpareHub Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .product-image-thumb {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 5px;
+    }
+    
+    .stock-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .stock-in { background: #d4edda; color: #155724; }
+    .stock-low { background: #fff3cd; color: #856404; }
+    .stock-out { background: #f8d7da; color: #721c24; }
+    
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .status-active { background: #d4edda; color: #155724; }
+    .status-inactive { background: #f8d7da; color: #721c24; }
+    
+    .action-buttons .btn {
+        padding: 3px 8px;
+        font-size: 0.85rem;
+        margin-right: 5px;
+    }
+    
+    .search-box {
+        position: relative;
+    }
+    
+    .search-box .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6c757d;
+    }
+    
+    .search-box input {
+        padding-left: 40px;
+    }
+    
+    .filter-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    .filter-tag {
+        background: #e9ecef;
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .filter-tag .close {
+        margin-left: 5px;
+        cursor: pointer;
+    }
+    
+    .dataTables_wrapper {
+        padding: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Product Management</h1>
+            <p class="text-muted mb-0">Manage your product catalog</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.add_product') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Product
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="search-box">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" class="form-control" id="search-input" 
+                               placeholder="Search products...">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" id="category-filter">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" id="status-filter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <select class="form-select" id="stock-filter">
+                        <option value="">All Stock</option>
+                        <option value="in_stock">In Stock</option>
+                        <option value="low_stock">Low Stock</option>
+                        <option value="out_of_stock">Out of Stock</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Active Filters -->
+            <div class="filter-tags" id="active-filters"></div>
+        </div>
+    </div>
+    
+    <!-- Products Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="products-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;">Image</th>
+                            <th>Product</th>
+                            <th>Category</th>
+                            <th>Part #</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products.items %}
+                        <tr>
+                            <!-- Product Image -->
+                            <td>
+                                <img src="{{ product.primary_image }}" 
+                                     alt="{{ product.name }}"
+                                     class="product-image-thumb"
+                                     onerror="this.src='/static/images/product-placeholder.jpg'">
+                            </td>
+                            
+                            <!-- Product Details -->
+                            <td>
+                                <div class="fw-semibold">{{ product.name }}</div>
+                                {% if product.vehicle_brand %}
+                                <small class="text-muted">
+                                    <i class="fas fa-car me-1"></i>
+                                    {{ product.vehicle_brand.name }}
+                                    {% if product.vehicle_model %}
+                                    | {{ product.vehicle_model.name }}
+                                    {% endif %}
+                                </small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Category -->
+                            <td>
+                                {% if product.category %}
+                                <span class="badge bg-secondary">
+                                    {{ product.category.name }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Part Number -->
+                            <td>
+                                <code>{{ product.part_number }}</code>
+                            </td>
+                            
+                            <!-- Price -->
+                            <td>
+                                <div class="fw-semibold">₹{{ "%.2f"|format(product.discounted_price) }}</div>
+                                {% if product.discount > 0 %}
+                                <small class="text-muted text-decoration-line-through">
+                                    ₹{{ "%.2f"|format(product.price) }}
+                                </small>
+                                <small class="text-success">({{ product.discount }}%)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Stock -->
+                            <td>
+                                {% if product.stock_quantity > 10 %}
+                                <span class="stock-badge stock-in">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    {{ product.stock_quantity }}
+                                </span>
+                                {% elif product.stock_quantity > 0 and product.stock_quantity <= 10 %}
+                                <span class="stock-badge stock-low">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    {{ product.stock_quantity }}
+                                </span>
+                                {% else %}
+                                <span class="stock-badge stock-out">
+                                    <i class="fas fa-times-circle me-1"></i>
+                                    Out of Stock
+                                </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Status -->
+                            <td>
+                                {% if product.is_active %}
+                                <span class="status-badge status-active">
+                                    <i class="fas fa-check me-1"></i>
+                                    Active
+                                </span>
+                                {% else %}
+                                <span class="status-badge status-inactive">
+                                    <i class="fas fa-times me-1"></i>
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Actions -->
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{{ url_for('shop.product_detail', slug=product.slug) }}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       target="_blank"
+                                       title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_product', product_id=product.id) }}" 
+                                       class="btn btn-sm btn-outline-warning"
+                                       title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteProduct({{ product.id }}, '{{ product.name|escapejs }}')"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                   onclick="updateStock({{ product.id }})">
+                                                    <i class="fas fa-box me-2"></i>Update Stock
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                   onclick="toggleStatus({{ product.id }}, {{ product.is_active|lower }})">
+                                                    <i class="fas fa-power-off me-2"></i>
+                                                    {{ 'Deactivate' if product.is_active else 'Activate' }}
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                   onclick="duplicateProduct({{ product.id }})">
+                                                    <i class="fas fa-copy me-2"></i>Duplicate
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" 
+                                                   href="{{ url_for('admin.order_detail', order_id=0) }}?product={{ product.id }}">
+                                                    <i class="fas fa-chart-line me-2"></i>Sales Report
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if products.pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if products.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.products', page=products.prev_num, **request.args) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page in products.iter_pages() %}
+                        {% if page %}
+                            <li class="page-item {% if page == products.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.products', page=page, **request.args) }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if products.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.products', page=products.next_num, **request.args) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Products</h6>
+                            <h3 class="mb-0">{{ total_products }}</h3>
+                        </div>
+                        <i class="fas fa-boxes fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Active Products</h6>
+                            <h3 class="mb-0">{{ active_products }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-dark-50 mb-1">Low Stock</h6>
+                            <h3 class="mb-0">{{ low_stock_products }}</h3>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Out of Stock</h6>
+                            <h3 class="mb-0">{{ out_of_stock_products }}</h3>
+                        </div>
+                        <i class="fas fa-times-circle fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="stock-form">
+                    <input type="hidden" id="stock-product-id">
+                    <div class="mb-3">
+                        <label for="current-stock" class="form-label">Current Stock</label>
+                        <input type="number" class="form-control" id="current-stock" 
+                               readonly disabled>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock-action" class="form-label">Action</label>
+                        <select class="form-select" id="stock-action" onchange="toggleStockFields()">
+                            <option value="set">Set to specific value</option>
+                            <option value="add">Add stock</option>
+                            <option value="subtract">Subtract stock</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock-quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="stock-quantity" 
+                               min="1" value="1" required>
+                    </div>
+                    <div class="mb-3" id="new-stock-container" style="display: none;">
+                        <label for="new-stock" class="form-label">New Stock Will Be</label>
+                        <input type="number" class="form-control" id="new-stock" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stock-notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="stock-notes" rows="3" 
+                                  placeholder="Add notes about this stock update..."></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" onclick="submitStockUpdate()">
+                            <i class="fas fa-save me-2"></i>Update Stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="delete-product-name"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This action cannot be undone. All product data will be permanently deleted.
+                </p>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirm-delete">
+                    <label class="form-check-label" for="confirm-delete">
+                        I understand this action cannot be undone
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDelete()" 
+                        id="delete-confirm-btn" disabled>
+                    <i class="fas fa-trash me-2"></i>Delete Product
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    // Initialize DataTable
+    $(document).ready(function() {
+        const table = $('#products-table').DataTable({
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            order: [[1, 'asc']], // Sort by product name
+            language: {
+                search: "Search products:",
+                lengthMenu: "Show _MENU_ products",
+                info: "Showing _START_ to _END_ of _TOTAL_ products"
+            }
+        });
+        
+        // Search functionality
+        $('#search-input').on('keyup', function() {
+            table.search(this.value).draw();
+            updateActiveFilters();
+        });
+        
+        // Category filter
+        $('#category-filter').on('change', function() {
+            const value = this.value;
+            if (value) {
+                table.column(2).search(value).draw();
+            } else {
+                table.column(2).search('').draw();
+            }
+            updateActiveFilters();
+        });
+        
+        // Status filter
+        $('#status-filter').on('change', function() {
+            const value = this.value;
+            if (value === 'active') {
+                table.column(6).search('Active').draw();
+            } else if (value === 'inactive') {
+                table.column(6).search('Inactive').draw();
+            } else {
+                table.column(6).search('').draw();
+            }
+            updateActiveFilters();
+        });
+        
+        // Stock filter
+        $('#stock-filter').on('change', function() {
+            const value = this.value;
+            let searchTerm = '';
+            
+            if (value === 'in_stock') {
+                searchTerm = 'In Stock|Good';
+            } else if (value === 'low_stock') {
+                searchTerm = 'Low Stock';
+            } else if (value === 'out_of_stock') {
+                searchTerm = 'Out of Stock';
+            }
+            
+            table.column(5).search(searchTerm, true, false).draw();
+            updateActiveFilters();
+        });
+    });
+    
+    // Update active filters display
+    function updateActiveFilters() {
+        const filtersContainer = document.getElementById('active-filters');
+        let filtersHtml = '';
+        
+        const searchValue = document.getElementById('search-input').value;
+        const categoryValue = document.getElementById('category-filter').value;
+        const statusValue = document.getElementById('status-filter').value;
+        const stockValue = document.getElementById('stock-filter').value;
+        
+        if (searchValue) {
+            filtersHtml += `
+                <span class="filter-tag">
+                    Search: "${searchValue}"
+                    <span class="close" onclick="clearSearch()">&times;</span>
+                </span>
+            `;
+        }
+        
+        if (categoryValue) {
+            const categoryName = document.getElementById('category-filter').options[document.getElementById('category-filter').selectedIndex].text;
+            filtersHtml += `
+                <span class="filter-tag">
+                    Category: ${categoryName}
+                    <span class="close" onclick="clearFilter('category-filter')">&times;</span>
+                </span>
+            `;
+        }
+        
+        if (statusValue) {
+            filtersHtml += `
+                <span class="filter-tag">
+                    Status: ${statusValue.charAt(0).toUpperCase() + statusValue.slice(1)}
+                    <span class="close" onclick="clearFilter('status-filter')">&times;</span>
+                </span>
+            `;
+        }
+        
+        if (stockValue) {
+            const stockText = stockValue.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            filtersHtml += `
+                <span class="filter-tag">
+                    Stock: ${stockText}
+                    <span class="close" onclick="clearFilter('stock-filter')">&times;</span>
+                </span>
+            `;
+        }
+        
+        filtersContainer.innerHTML = filtersHtml;
+    }
+    
+    // Clear search
+    function clearSearch() {
+        document.getElementById('search-input').value = '';
+        $('#products-table').DataTable().search('').draw();
+        updateActiveFilters();
+    }
+    
+    // Clear specific filter
+    function clearFilter(filterId) {
+        document.getElementById(filterId).value = '';
+        
+        if (filterId === 'category-filter') {
+            $('#products-table').DataTable().column(2).search('').draw();
+        } else if (filterId === 'status-filter') {
+            $('#products-table').DataTable().column(6).search('').draw();
+        } else if (filterId === 'stock-filter') {
+            $('#products-table').DataTable().column(5).search('').draw();
+        }
+        
+        updateActiveFilters();
+    }
+    
+    // Delete product
+    let productToDelete = null;
+    let productNameToDelete = '';
+    
+    function deleteProduct(productId, productName) {
+        productToDelete = productId;
+        productNameToDelete = productName;
+        
+        document.getElementById('delete-product-name').textContent = productName;
+        document.getElementById('confirm-delete').checked = false;
+        document.getElementById('delete-confirm-btn').disabled = true;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+    }
+    
+    // Enable delete button when checkbox is checked
+    document.getElementById('confirm-delete').addEventListener('change', function() {
+        document.getElementById('delete-confirm-btn').disabled = !this.checked;
+    });
+    
+    // Confirm deletion
+    async function confirmDelete() {
+        if (!productToDelete) return;
+        
+        try {
+            const response = await fetch(`/admin/products/delete/${productToDelete}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Product deleted successfully', 'success');
+                $('#deleteModal').modal('hide');
+                
+                // Remove row from table
+                const table = $('#products-table').DataTable();
+                table.row(`#product-${productToDelete}`).remove().draw();
+                
+                // Reload after 1 second
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            showNotification('Failed to delete product', 'error');
+        }
+    }
+    
+    // Update stock
+    let stockProductId = null;
+    
+    async function updateStock(productId) {
+        stockProductId = productId;
+        
+        try {
+            // Fetch current stock
+            const response = await fetch(`/admin/api/products/${productId}/stock`);
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('stock-product-id').value = productId;
+                document.getElementById('current-stock').value = data.stock;
+                document.getElementById('stock-quantity').value = 1;
+                document.getElementById('stock-notes').value = '';
+                
+                // Calculate new stock
+                calculateNewStock();
+                
+                const modal = new bootstrap.Modal(document.getElementById('updateStockModal'));
+                modal.show();
+            } else {
+                showNotification('Failed to fetch stock data', 'error');
+            }
+        } catch (error) {
+            console.error('Error fetching stock:', error);
+            showNotification('Failed to fetch stock data', 'error');
+        }
+    }
+    
+    // Toggle stock fields based on action
+    function toggleStockFields() {
+        const action = document.getElementById('stock-action').value;
+        const newStockContainer = document.getElementById('new-stock-container');
+        
+        if (action === 'set') {
+            newStockContainer.style.display = 'block';
+        } else {
+            newStockContainer.style.display = 'none';
+        }
+        
+        calculateNewStock();
+    }
+    
+    // Calculate new stock
+    function calculateNewStock() {
+        const currentStock = parseInt(document.getElementById('current-stock').value) || 0;
+        const quantity = parseInt(document.getElementById('stock-quantity').value) || 1;
+        const action = document.getElementById('stock-action').value;
+        
+        let newStock = currentStock;
+        
+        switch(action) {
+            case 'set':
+                newStock = quantity;
+                break;
+            case 'add':
+                newStock = currentStock + quantity;
+                break;
+            case 'subtract':
+                newStock = currentStock - quantity;
+                if (newStock < 0) newStock = 0;
+                break;
+        }
+        
+        document.getElementById('new-stock').value = newStock;
+    }
+    
+    // Update stock quantity input
+    document.getElementById('stock-quantity').addEventListener('input', calculateNewStock);
+    
+    // Submit stock update
+    async function submitStockUpdate() {
+        const productId = document.getElementById('stock-product-id').value;
+        const action = document.getElementById('stock-action').value;
+        const quantity = document.getElementById('stock-quantity').value;
+        const notes = document.getElementById('stock-notes').value;
+        
+        if (!quantity || parseInt(quantity) < 1) {
+            alert('Please enter a valid quantity');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/update-stock`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `action=${action}&quantity=${quantity}&notes=${encodeURIComponent(notes)}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Stock updated successfully', 'success');
+                $('#updateStockModal').modal('hide');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating stock:', error);
+            showNotification('Failed to update stock', 'error');
+        }
+    }
+    
+    // Toggle product status
+    async function toggleStatus(productId, isActive) {
+        const newStatus = !isActive;
+        const action = newStatus ? 'activate' : 'deactivate';
+        
+        if (!confirm(`Are you sure you want to ${action} this product?`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/toggle-status`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`Product ${action}d successfully`, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error toggling status:', error);
+            showNotification('Failed to update product status', 'error');
+        }
+    }
+    
+    // Duplicate product
+    async function duplicateProduct(productId) {
+        if (!confirm('Are you sure you want to duplicate this product?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/api/products/${productId}/duplicate`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Product duplicated successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = `/admin/products/edit/${data.product_id}`;
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error duplicating product:', error);
+            showNotification('Failed to duplicate product', 'error');
+        }
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

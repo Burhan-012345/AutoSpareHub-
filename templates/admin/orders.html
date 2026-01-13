@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+
+{% block title %}Order Management - AutoSpareHub Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+<style>
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-confirmed { background: #d1ecf1; color: #0c5460; }
+    .status-packed { background: #cce5ff; color: #004085; }
+    .status-shipped { background: #e2d9f3; color: #4a3c8c; }
+    .status-delivered { background: #d4edda; color: #155724; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    
+    .order-actions .btn {
+        padding: 2px 8px;
+        font-size: 0.85rem;
+    }
+    
+    .filter-buttons .btn {
+        padding: 5px 15px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .dataTables_wrapper {
+        padding: 0;
+    }
+    
+    .dataTables_filter input {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+    
+    .order-detail-link {
+        color: #0A1F44;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .order-detail-link:hover {
+        color: #FF8C00;
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Order Management</h1>
+            <p class="text-muted mb-0">Manage and track customer orders</p>
+        </div>
+        <div>
+            <button class="btn btn-primary" onclick="exportOrders()">
+                <i class="fas fa-download me-2"></i>Export Orders
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Filters</h5>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="status-filter">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="confirmed" {% if request.args.get('status') == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="packed" {% if request.args.get('status') == 'packed' %}selected{% endif %}>Packed</option>
+                        <option value="shipped" {% if request.args.get('status') == 'shipped' %}selected{% endif %}>Shipped</option>
+                        <option value="delivered" {% if request.args.get('status') == 'delivered' %}selected{% endif %}>Delivered</option>
+                        <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Date Range</label>
+                    <input type="date" class="form-control" id="date-from" 
+                           value="{{ request.args.get('date_from', '') }}">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">To</label>
+                    <input type="date" class="form-control" id="date-to" 
+                           value="{{ request.args.get('date_to', '') }}">
+                </div>
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-filter me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Status Filters -->
+            <div class="filter-buttons mt-3">
+                <small class="text-muted d-block mb-2">Quick Filters:</small>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('pending')">
+                    Pending ({{ get_order_count('pending') }})
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('confirmed')">
+                    Confirmed ({{ get_order_count('confirmed') }})
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('packed')">
+                    Packed ({{ get_order_count('packed') }})
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('shipped')">
+                    Shipped ({{ get_order_count('shipped') }})
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('delivered')">
+                    Delivered ({{ get_order_count('delivered') }})
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="setStatusFilter('cancelled')">
+                    Cancelled ({{ get_order_count('cancelled') }})
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                    Clear All
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Orders Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="orders-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Items</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders.items %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+                                   class="order-detail-link">
+                                    {{ order.order_number }}
+                                </a>
+                            </td>
+                            <td>
+                                <div>{{ order.user.name }}</div>
+                                <small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+                            <td>{{ order.created_at.strftime('%d %b, %Y') }}</td>
+                            <td>{{ order.items|length }}</td>
+                            <td>₹{{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                <span class="status-badge status-{{ order.order_status }}">
+                                    {{ order.order_status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if order.payment_status == 'paid' %}success{% elif order.payment_status == 'pending' %}warning{% else %}danger{% endif %}">
+                                    {{ order.payment_status|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="dropdown order-actions">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" 
+                                               href="{{ url_for('admin.order_detail', order_id=order.id) }}">
+                                                <i class="fas fa-eye me-2"></i>View Details
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="printInvoice({{ order.id }})">
+                                                <i class="fas fa-print me-2"></i>Print Invoice
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item text-success" href="#"
+                                               onclick="updateOrderStatus({{ order.id }}, 'confirmed')">
+                                                <i class="fas fa-check me-2"></i>Confirm Order
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-info" href="#"
+                                               onclick="updateOrderStatus({{ order.id }}, 'packed')">
+                                                <i class="fas fa-box me-2"></i>Mark as Packed
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-primary" href="#"
+                                               onclick="showShippingModal({{ order.id }})">
+                                                <i class="fas fa-truck me-2"></i>Mark as Shipped
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-warning" href="#"
+                                               onclick="updateOrderStatus({{ order.id }}, 'delivered')">
+                                                <i class="fas fa-home me-2"></i>Mark as Delivered
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#"
+                                               onclick="updateOrderStatus({{ order.id }}, 'cancelled')">
+                                                <i class="fas fa-times me-2"></i>Cancel Order
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if orders.pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if orders.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.orders', page=orders.prev_num, **request.args) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page in orders.iter_pages() %}
+                        {% if page %}
+                            <li class="page-item {% if page == orders.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.orders', page=page, **request.args) }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.orders', page=orders.next_num, **request.args) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Orders</h6>
+                            <h3 class="mb-0">{{ total_orders }}</h3>
+                        </div>
+                        <i class="fas fa-shopping-bag fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Pending Orders</h6>
+                            <h3 class="mb-0">{{ pending_orders }}</h3>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Revenue Today</h6>
+                            <h3 class="mb-0">₹{{ today_revenue|default(0) }}</h3>
+                        </div>
+                        <i class="fas fa-rupee-sign fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-dark-50 mb-1">Avg. Order Value</h6>
+                            <h3 class="mb-0">₹{{ avg_order_value|default(0) }}</h3>
+                        </div>
+                        <i class="fas fa-chart-line fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shipping Modal -->
+<div class="modal fade" id="shippingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Shipping Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="shipping-form">
+                    <input type="hidden" id="shipping-order-id">
+                    <div class="mb-3">
+                        <label for="tracking-number" class="form-label">Tracking Number</label>
+                        <input type="text" class="form-control" id="tracking-number" 
+                               placeholder="Enter tracking number">
+                    </div>
+                    <div class="mb-3">
+                        <label for="shipping-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="shipping-notes" rows="3" 
+                                  placeholder="Add any shipping notes..."></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" 
+                                onclick="markAsShipped()">
+                            <i class="fas fa-truck me-2"></i>Mark as Shipped
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div class="modal fade" id="statusModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Order Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="status-form">
+                    <input type="hidden" id="status-order-id">
+                    <div class="mb-3">
+                        <label for="new-status" class="form-label">New Status</label>
+                        <select class="form-select" id="new-status">
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="packed">Packed</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="status-notes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="status-notes" rows="3" 
+                                  placeholder="Add status update notes..."></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-primary" 
+                                onclick="submitStatusUpdate()">
+                            <i class="fas fa-save me-2"></i>Update Status
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    // Initialize DataTable
+    $(document).ready(function() {
+        $('#orders-table').DataTable({
+            pageLength: 25,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            order: [[2, 'desc']], // Sort by date descending
+            language: {
+                search: "Search orders:",
+                lengthMenu: "Show _MENU_ orders",
+                info: "Showing _START_ to _END_ of _TOTAL_ orders"
+            }
+        });
+    });
+    
+    // Apply filters
+    function applyFilters() {
+        const status = document.getElementById('status-filter').value;
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+        
+        let url = new URL(window.location.href);
+        let params = new URLSearchParams(url.search);
+        
+        if (status) params.set('status', status);
+        else params.delete('status');
+        
+        if (dateFrom) params.set('date_from', dateFrom);
+        else params.delete('date_from');
+        
+        if (dateTo) params.set('date_to', dateTo);
+        else params.delete('date_to');
+        
+        params.delete('page'); // Reset to first page
+        
+        window.location.href = `${url.pathname}?${params.toString()}`;
+    }
+    
+    // Set status filter
+    function setStatusFilter(status) {
+        document.getElementById('status-filter').value = status;
+        applyFilters();
+    }
+    
+    // Clear all filters
+    function clearFilters() {
+        document.getElementById('status-filter').value = '';
+        document.getElementById('date-from').value = '';
+        document.getElementById('date-to').value = '';
+        applyFilters();
+    }
+    
+    // Show shipping modal
+    function showShippingModal(orderId) {
+        document.getElementById('shipping-order-id').value = orderId;
+        const modal = new bootstrap.Modal(document.getElementById('shippingModal'));
+        modal.show();
+    }
+    
+    // Mark as shipped
+    async function markAsShipped() {
+        const orderId = document.getElementById('shipping-order-id').value;
+        const trackingNumber = document.getElementById('tracking-number').value;
+        const notes = document.getElementById('shipping-notes').value;
+        
+        if (!trackingNumber.trim()) {
+            alert('Please enter a tracking number');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/orders/update-status/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `status=shipped&tracking_number=${encodeURIComponent(trackingNumber)}&notes=${encodeURIComponent(notes)}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Order marked as shipped', 'success');
+                $('#shippingModal').modal('hide');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating order:', error);
+            showNotification('Failed to update order', 'error');
+        }
+    }
+    
+    // Update order status
+    async function updateOrderStatus(orderId, status) {
+        if (status === 'shipped') {
+            showShippingModal(orderId);
+            return;
+        }
+        
+        let message = `Are you sure you want to mark this order as ${status}?`;
+        if (status === 'cancelled') {
+            const reason = prompt('Please enter cancellation reason:');
+            if (!reason) return;
+            message += `\nReason: ${reason}`;
+        }
+        
+        if (!confirm(message)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/orders/update-status/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `status=${status}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification(`Order marked as ${status}`, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            showNotification('Failed to update order status', 'error');
+        }
+    }
+    
+    // Show status update modal
+    function showStatusModal(orderId) {
+        document.getElementById('status-order-id').value = orderId;
+        const modal = new bootstrap.Modal(document.getElementById('statusModal'));
+        modal.show();
+    }
+    
+    // Submit status update
+    async function submitStatusUpdate() {
+        const orderId = document.getElementById('status-order-id').value;
+        const status = document.getElementById('new-status').value;
+        const notes = document.getElementById('status-notes').value;
+        
+        try {
+            const response = await fetch(`/admin/orders/update-status/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `status=${status}&notes=${encodeURIComponent(notes)}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Order status updated', 'success');
+                $('#statusModal').modal('hide');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            showNotification('Failed to update order status', 'error');
+        }
+    }
+    
+    // Print invoice
+    function printInvoice(orderId) {
+        window.open(`/admin/orders/${orderId}/invoice?print=true`, '_blank');
+    }
+    
+    // Export orders
+    async function exportOrders() {
+        try {
+            const response = await fetch('/admin/api/orders/export');
+            const blob = await response.blob();
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `orders_export_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showNotification('Export started', 'success');
+        } catch (error) {
+            console.error('Error exporting orders:', error);
+            showNotification('Failed to export orders', 'error');
+        }
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,565 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - AutoSpareHub{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/apexcharts@3.35.3/dist/apexcharts.min.css" rel="stylesheet">
+<style>
+    .stat-card {
+        border-radius: 10px;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+    
+    .recent-activity {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item {
+        border-left: 3px solid;
+        padding-left: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .activity-item.order {
+        border-left-color: #0A1F44;
+    }
+    
+    .activity-item.user {
+        border-left-color: #FF8C00;
+    }
+    
+    .activity-item.product {
+        border-left-color: #28A745;
+    }
+    
+    .low-stock-item {
+        border-left: 3px solid #FFC107;
+        padding-left: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Dashboard</h1>
+            <p class="text-muted mb-0">Welcome back, {{ current_user.name }}!</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" id="refresh-stats">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print me-2"></i>Print Report
+            </button>
+        </div>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-0 bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Revenue</h6>
+                            <h2 class="mb-0">₹{{ "%.2f"|format(total_sales) }}</h2>
+                            <small class="text-white-75">Lifetime</small>
+                        </div>
+                        <div class="stat-icon bg-white-10">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-0 bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Orders</h6>
+                            <h2 class="mb-0">{{ total_orders }}</h2>
+                            <small class="text-white-75">All time</small>
+                        </div>
+                        <div class="stat-icon bg-white-10">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-0 bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-dark-50 mb-1">Total Products</h6>
+                            <h2 class="mb-0">{{ total_products }}</h2>
+                            <small class="text-dark-75">Active listings</small>
+                        </div>
+                        <div class="stat-icon bg-white-10">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card border-0 bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Users</h6>
+                            <h2 class="mb-0">{{ total_users }}</h2>
+                            <small class="text-white-75">Registered</small>
+                        </div>
+                        <div class="stat-icon bg-white-10">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Sales Chart -->
+        <div class="col-xl-8 mb-4">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Sales Overview (Last 30 Days)</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary active" data-period="30">30 Days</button>
+                        <button class="btn btn-outline-primary" data-period="7">7 Days</button>
+                        <button class="btn btn-outline-primary" data-period="365">1 Year</button>
+                    </div>
+                </div>
+                <div id="salesChart"></div>
+            </div>
+        </div>
+        
+        <!-- Order Status Chart -->
+        <div class="col-xl-4 mb-4">
+            <div class="chart-container h-100">
+                <h5 class="mb-3">Order Status Distribution</h5>
+                <div id="orderStatusChart"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders & Activities -->
+    <div class="row">
+        <!-- Recent Orders -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Orders</h5>
+                    <a href="{{ url_for('admin.orders') }}" class="btn btn-sm btn-light">
+                        View All <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+                                           class="text-decoration-none">
+                                            {{ order.order_number }}
+                                        </a>
+                                    </td>
+                                    <td>{{ order.user.name }}</td>
+                                    <td>{{ order.created_at.strftime('%d %b, %Y') }}</td>
+                                    <td>₹{{ "%.2f"|format(order.total_amount) }}</td>
+                                    <td>
+                                        <span class="badge status-{{ order.order_status }}">
+                                            {{ order.order_status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('admin.order_detail', order_id=order.id) }}" 
+                                               class="btn btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if order.order_status == 'pending' %}
+                                            <button class="btn btn-outline-success" 
+                                                    onclick="updateOrderStatus({{ order.id }}, 'confirmed')">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Low Stock & Recent Activity -->
+        <div class="col-lg-4">
+            <!-- Low Stock Alert -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Low Stock Alert</h5>
+                </div>
+                <div class="card-body">
+                    {% if low_stock_products %}
+                    <div class="recent-activity">
+                        {% for product in low_stock_products %}
+                        <div class="low-stock-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ product.name }}</h6>
+                                    <small class="text-muted">Part #: {{ product.part_number }}</small>
+                                </div>
+                                <span class="badge bg-warning">{{ product.stock_quantity }} left</span>
+                            </div>
+                            <div class="mt-2">
+                                <a href="{{ url_for('admin.edit_product', product_id=product.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit me-1"></i>Update Stock
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                        <p class="text-muted mb-0">All products have sufficient stock</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Today's Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div id="today-stats">
+                        <div class="text-center py-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3.35.3/dist/apexcharts.min.js"></script>
+<script>
+    // Initialize sales chart
+    let salesChart;
+    function initSalesChart() {
+        const salesDates = {{ sales_dates|tojson }};
+        const salesTotals = {{ sales_totals|tojson }};
+        
+        const options = {
+            series: [{
+                name: 'Sales',
+                data: salesTotals
+            }],
+            chart: {
+                type: 'area',
+                height: 350,
+                toolbar: {
+                    show: true
+                }
+            },
+            colors: ['#0A1F44'],
+            dataLabels: {
+                enabled: false
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.2,
+                    stops: [0, 90, 100]
+                }
+            },
+            xaxis: {
+                categories: salesDates,
+                labels: {
+                    rotate: -45,
+                    rotateAlways: true
+                }
+            },
+            yaxis: {
+                title: {
+                    text: 'Sales (₹)'
+                },
+                labels: {
+                    formatter: function(value) {
+                        return '₹' + value.toFixed(2);
+                    }
+                }
+            },
+            tooltip: {
+                y: {
+                    formatter: function(value) {
+                        return '₹' + value.toFixed(2);
+                    }
+                }
+            }
+        };
+        
+        salesChart = new ApexCharts(document.querySelector("#salesChart"), options);
+        salesChart.render();
+    }
+    
+    // Initialize order status chart
+    let orderStatusChart;
+    function initOrderStatusChart() {
+        const statusLabels = {{ status_labels|tojson }};
+        const statusData = {{ status_data|tojson }};
+        
+        // Define colors for each status
+        const statusColors = {
+            'pending': '#FFC107',
+            'confirmed': '#17A2B8',
+            'packed': '#007BFF',
+            'shipped': '#6F42C1',
+            'delivered': '#28A745',
+            'cancelled': '#DC3545'
+        };
+        
+        const colors = statusLabels.map(label => statusColors[label.toLowerCase()] || '#6C757D');
+        
+        const options = {
+            series: statusData,
+            chart: {
+                type: 'donut',
+                height: 350
+            },
+            colors: colors,
+            labels: statusLabels.map(label => label.charAt(0).toUpperCase() + label.slice(1)),
+            responsive: [{
+                breakpoint: 480,
+                options: {
+                    chart: {
+                        width: 200
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }],
+            legend: {
+                position: 'bottom'
+            },
+            plotOptions: {
+                pie: {
+                    donut: {
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true,
+                                label: 'Total Orders',
+                                color: '#0A1F44',
+                                formatter: function(w) {
+                                    return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        orderStatusChart = new ApexCharts(document.querySelector("#orderStatusChart"), options);
+        orderStatusChart.render();
+    }
+    
+    // Load today's stats
+    async function loadTodayStats() {
+        try {
+            const response = await fetch('/admin/api/stats');
+            const data = await response.json();
+            
+            const statsHtml = `
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-primary mb-1">₹${data.today_sales.toFixed(2)}</h4>
+                            <small class="text-muted">Today's Sales</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-success mb-1">₹${data.month_sales.toFixed(2)}</h4>
+                            <small class="text-muted">This Month</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-warning mb-1">${data.pending_orders}</h4>
+                            <small class="text-muted">Pending Orders</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded">
+                            <h4 class="text-danger mb-1">${data.low_stock_count}</h4>
+                            <small class="text-muted">Low Stock Items</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('today-stats').innerHTML = statsHtml;
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            document.getElementById('today-stats').innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-exclamation-circle fa-2x text-danger mb-3"></i>
+                    <p class="text-muted mb-0">Failed to load stats</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Update order status
+    async function updateOrderStatus(orderId, status) {
+        if (!confirm('Are you sure you want to update this order status?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/admin/orders/update-status/${orderId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `status=${status}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showNotification('Order status updated successfully', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            showNotification('Failed to update order status', 'error');
+        }
+    }
+    
+    // Refresh stats
+    document.getElementById('refresh-stats').addEventListener('click', function() {
+        loadTodayStats();
+        showNotification('Stats refreshed', 'info');
+    });
+    
+    // Initialize charts when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initSalesChart();
+        initOrderStatusChart();
+        loadTodayStats();
+        
+        // Period selector for sales chart
+        document.querySelectorAll('[data-period]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('[data-period]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                const period = this.dataset.period;
+                // In a real implementation, this would fetch new data for the selected period
+                showNotification(`Loading ${period} days data...`, 'info');
+            });
+        });
+    });
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}
