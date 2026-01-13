@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmation - AutoSpareHub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Success Animation -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg order-success-container">
+                <div class="card-body text-center py-5">
+                    <!-- Success Checkmark Animation -->
+                    <div class="success-checkmark mb-4">
+                        <div class="check-icon">
+                            <span class="icon-line line-tip"></span>
+                            <span class="icon-line line-long"></span>
+                            <div class="icon-circle"></div>
+                            <div class="icon-fix"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confetti Container -->
+                    <div class="confetti-container position-absolute top-0 start-0 w-100 h-100" style="pointer-events: none;"></div>
+                    
+                    <!-- Delivery Animation (Alternative) -->
+                    <!-- <div class="delivery-animation mb-4">
+                        <div class="package-delivery">
+                            <div class="package"></div>
+                            <div class="delivery-truck">
+                                <div class="truck-body"></div>
+                                <div class="truck-cabin"></div>
+                                <div class="wheel wheel-front"></div>
+                                <div class="wheel wheel-back"></div>
+                            </div>
+                        </div>
+                    </div> -->
+                    
+                    <h1 class="text-primary mb-3">Order Placed Successfully!</h1>
+                    <p class="lead text-secondary mb-4">Thank you for your purchase. Your order is being processed.</p>
+                    
+                    <!-- Order Details -->
+                    <div class="order-details fade-in">
+                        <div class="row justify-content-center mb-4">
+                            <div class="col-md-8">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h5 class="text-primary">Order ID</h5>
+                                                <p class="h4" id="order-id">{{ order.order_number }}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h5 class="text-primary">Order Date</h5>
+                                                <p class="h4" id="order-date">{{ order.created_at.strftime('%d %b, %Y %I:%M %p') }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Estimated Delivery -->
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-shipping-fast fa-2x me-3 text-primary"></i>
+                                <div>
+                                    <h5 class="mb-1">Estimated Delivery</h5>
+                                    <p class="mb-0" id="estimated-delivery">
+                                        {{ (order.created_at + timedelta(days=3)).strftime('%A, %d %B %Y') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
+                            <button id="view-order-details" class="btn btn-primary btn-lg">
+                                <i class="fas fa-eye me-2"></i>View Order Details
+                            </button>
+                            <button id="track-order" class="btn btn-outline-primary btn-lg" onclick="trackOrder()">
+                                <i class="fas fa-map-marker-alt me-2"></i>Track Order
+                            </button>
+                            <button id="continue-shopping" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-shopping-cart me-2"></i>Continue Shopping
+                            </button>
+                        </div>
+                        
+                        <!-- PWA Install Button (Hidden by default) -->
+                        <div id="install-app" class="mb-4" style="display: none;">
+                            <button class="btn btn-outline-success">
+                                <i class="fas fa-download me-2"></i>Install App
+                            </button>
+                            <small class="text-muted d-block mt-1">Install AutoSpareHub for a better experience</small>
+                        </div>
+                        
+                        <!-- Share Options -->
+                        <div class="mb-4">
+                            <p class="text-muted mb-2">Share your order:</p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <button id="share-order" class="btn btn-outline-primary">
+                                    <i class="fas fa-share-alt me-2"></i>Share
+                                </button>
+                                <button id="print-receipt" class="btn btn-outline-secondary">
+                                    <i class="fas fa-print me-2"></i>Print Receipt
+                                </button>
+                                <button id="download-invoice" class="btn btn-outline-success">
+                                    <i class="fas fa-file-pdf me-2"></i>Download Invoice
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Summary -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Order Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Part Number</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.product_name }}</strong>
+                                    </td>
+                                    <td>{{ item.part_number }}</td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-end">₹{{ "%.2f"|format(item.total_price) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-group-divider">
+                                <tr>
+                                    <td colspan="3" class="text-end"><strong>Subtotal</strong></td>
+                                    <td class="text-end">₹{{ "%.2f"|format(order.subtotal) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Tax (GST)</td>
+                                    <td class="text-end">₹{{ "%.2f"|format(order.tax_amount) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Shipping</td>
+                                    <td class="text-end">₹{{ "%.2f"|format(order.shipping_amount) }}</td>
+                                </tr>
+                                <tr class="table-active">
+                                    <td colspan="3" class="text-end"><strong>Total</strong></td>
+                                    <td class="text-end">
+                                        <strong id="order-total">₹{{ "%.2f"|format(order.total_amount) }}</strong>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <!-- Shipping Information -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Shipping Address</h6>
+                                </div>
+                                <div class="card-body">
+                                    <address class="mb-0">
+                                        <strong>{{ order.address.full_name }}</strong><br>
+                                        {{ order.address.address_line1 }}<br>
+                                        {% if order.address.address_line2 %}
+                                        {{ order.address.address_line2 }}<br>
+                                        {% endif %}
+                                        {{ order.address.city }}, {{ order.address.state }}<br>
+                                        {{ order.address.postal_code }}<br>
+                                        {{ order.address.country }}<br>
+                                        <i class="fas fa-phone"></i> {{ order.address.phone }}
+                                    </address>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">Payment Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-2">
+                                        <strong>Method:</strong> 
+                                        <span class="badge bg-primary">
+                                            {{ 'Cash on Delivery' if order.payment_method == 'cod' else 'Online Payment' }}
+                                        </span>
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Status:</strong> 
+                                        <span class="badge {% if order.payment_status == 'paid' %}bg-success{% elif order.payment_status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ order.payment_status|title }}
+                                        </span>
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Order Status:</strong> 
+                                        <span class="badge status-{{ order.order_status }}">
+                                            {{ order.order_status|title }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Receipt (Hidden for printing) -->
+                    <div id="order-receipt" class="mt-4 d-none">
+                        {% include 'cart/order_receipt.html' %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tracking Modal -->
+<div class="modal fade" id="trackingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Order Tracking</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="tracking-timeline">
+                    <div class="tracking-step completed">
+                        <div class="step-icon"><i class="fas fa-shopping-cart"></i></div>
+                        <div class="step-content">
+                            <h6>Order Placed</h6>
+                            <p class="text-muted">{{ order.created_at.strftime('%d %b, %I:%M %p') }}</p>
+                        </div>
+                    </div>
+                    <div class="tracking-step {% if order.order_status in ['confirmed', 'packed', 'shipped', 'delivered'] %}completed{% endif %}">
+                        <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="step-content">
+                            <h6>Order Confirmed</h6>
+                            <p class="text-muted">
+                                {% if order.order_status in ['confirmed', 'packed', 'shipped', 'delivered'] %}
+                                {{ order.created_at.strftime('%d %b, %I:%M %p') }}
+                                {% else %}Pending{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tracking-step {% if order.order_status in ['packed', 'shipped', 'delivered'] %}completed{% endif %}">
+                        <div class="step-icon"><i class="fas fa-box"></i></div>
+                        <div class="step-content">
+                            <h6>Packed</h6>
+                            <p class="text-muted">
+                                {% if order.order_status in ['packed', 'shipped', 'delivered'] %}
+                                Soon
+                                {% else %}Pending{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tracking-step {% if order.order_status in ['shipped', 'delivered'] %}completed{% endif %}">
+                        <div class="step-icon"><i class="fas fa-shipping-fast"></i></div>
+                        <div class="step-content">
+                            <h6>Shipped</h6>
+                            <p class="text-muted">
+                                {% if order.order_status in ['shipped', 'delivered'] %}
+                                {% if order.tracking_number %}
+                                Tracking: {{ order.tracking_number }}
+                                {% else %}In transit{% endif %}
+                                {% else %}Pending{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="tracking-step {% if order.order_status == 'delivered' %}completed{% endif %}">
+                        <div class="step-icon"><i class="fas fa-home"></i></div>
+                        <div class="step-content">
+                            <h6>Delivered</h6>
+                            <p class="text-muted">
+                                {% if order.order_status == 'delivered' %}
+                                Estimated: {{ (order.created_at + timedelta(days=3)).strftime('%d %b') }}
+                                {% else %}Pending{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/order-success.js') }}"></script>
+<!-- Load html2pdf for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+{% endblock %}
