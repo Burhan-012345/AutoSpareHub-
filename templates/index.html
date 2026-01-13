@@ -1,0 +1,405 @@
+{% extends "base.html" %}
+
+{% block title %}AutoSpareHub - Premium Auto Parts Store{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="hero-title">Find Genuine Auto Parts for Your Vehicle</h1>
+                <p class="hero-subtitle">
+                    One-stop shop for all your automotive needs. 
+                    Quality parts, fast delivery, and expert support.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{{ url_for('shop.products') }}" class="btn btn-secondary btn-lg">
+                        <i class="fas fa-shopping-cart me-2"></i>Shop Now
+                    </a>
+                    <a href="#vehicle-search" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-car me-2"></i>Find Parts for Your Vehicle
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="{{ url_for('static', filename='images/hero-car.png') }}" 
+                     alt="Auto Parts" class="img-fluid" style="max-height: 400px;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Vehicle Search Section -->
+<section id="vehicle-search" class="py-5 bg-light">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="text-center mb-4">Find Parts for Your Vehicle</h2>
+                        <form id="vehicle-search-form">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Vehicle Brand</label>
+                                    <select class="form-select" id="vehicle-brand" required>
+                                        <option value="">Select Brand</option>
+                                        {% for brand in brands %}
+                                        <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Model</label>
+                                    <select class="form-select" id="vehicle-model" disabled required>
+                                        <option value="">Select Model</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Year</label>
+                                    <select class="form-select" id="vehicle-year" disabled required>
+                                        <option value="">Select Year</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <button type="button" id="vehicle-search-btn" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-search me-2"></i>Find Compatible Parts
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Categories -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Shop by Category</h2>
+        <div class="row">
+            {% for category in categories %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card category-card h-100 text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="category-icon mb-3">
+                            <i class="fas fa-cog fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">{{ category.name }}</h5>
+                        <p class="card-text text-muted small">
+                            {{ category.products|length }} products
+                        </p>
+                        <a href="{{ url_for('shop.category', slug=category.slug) }}" 
+                           class="btn btn-outline-primary btn-sm">
+                            Browse <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Featured Products -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <h2>Featured Products</h2>
+            <a href="{{ url_for('shop.products') }}" class="btn btn-outline-primary">
+                View All <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+        <div class="row">
+            {% for product in featured_products %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                {% include 'components/product_card.html' %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Why Choose Us -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Why Choose AutoSpareHub?</h2>
+        <div class="row">
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h5 class="mt-3">Genuine Parts</h5>
+                    <p class="text-muted">100% authentic parts with manufacturer warranty</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shipping-fast"></i>
+                    </div>
+                    <h5 class="mt-3">Fast Delivery</h5>
+                    <p class="text-muted">Same-day shipping on orders before 3PM</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h5 class="mt-3">Expert Support</h5>
+                    <p class="text-muted">24/7 customer support for all your queries</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-undo"></i>
+                    </div>
+                    <h5 class="mt-3">Easy Returns</h5>
+                    <p class="text-muted">30-day return policy on all products</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- New Arrivals -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <h2>New Arrivals</h2>
+            <a href="{{ url_for('shop.products', sort_by='created_at') }}" class="btn btn-outline-primary">
+                View All <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+        <div class="row">
+            {% for product in new_arrivals %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                {% include 'components/product_card.html' %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">What Our Customers Say</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="card-text">
+                            "Found the exact part I needed for my Toyota Camry. 
+                            Fast shipping and excellent customer service!"
+                        </p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="customer-avatar bg-primary text-white rounded-circle d-flex 
+                                      align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Rajesh Kumar</h6>
+                                <small class="text-muted">Toyota Camry Owner</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star-half-alt text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="card-text">
+                            "Great prices and genuine parts. Saved me a trip to the dealership. 
+                            Will definitely order again!"
+                        </p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="customer-avatar bg-primary text-white rounded-circle d-flex 
+                                      align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Priya Sharma</h6>
+                                <small class="text-muted">Honda City Owner</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card testimonial-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="rating">
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                                <i class="fas fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="card-text">
+                            "The vehicle search feature made it so easy to find compatible parts. 
+                            Installation guide was very helpful too!"
+                        </p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="customer-avatar bg-primary text-white rounded-circle d-flex 
+                                      align-items-center justify-content-center me-3" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Amit Patel</h6>
+                                <small class="text-muted">Mechanic</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 text-center">
+                <h2 class="mb-3">Stay Updated</h2>
+                <p class="mb-4">Subscribe to our newsletter for exclusive deals and new arrivals</p>
+                <form id="newsletter-form" class="d-flex">
+                    <input type="email" class="form-control me-2" 
+                           placeholder="Enter your email" required>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="fas fa-paper-plane"></i> Subscribe
+                    </button>
+                </form>
+                <small class="text-light opacity-75 mt-2 d-block">
+                    We respect your privacy. Unsubscribe at any time.
+                </small>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize vehicle search
+    document.addEventListener('DOMContentLoaded', function() {
+        const brandSelect = document.getElementById('vehicle-brand');
+        const modelSelect = document.getElementById('vehicle-model');
+        const yearSelect = document.getElementById('vehicle-year');
+        const searchBtn = document.getElementById('vehicle-search-btn');
+        
+        // Load models when brand changes
+        brandSelect.addEventListener('change', async function() {
+            const brandId = this.value;
+            
+            if (!brandId) {
+                modelSelect.innerHTML = '<option value="">Select Model</option>';
+                modelSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/models/${brandId}`);
+                const models = await response.json();
+                
+                modelSelect.innerHTML = '<option value="">Select Model</option>';
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = model.name;
+                    modelSelect.appendChild(option);
+                });
+                
+                modelSelect.disabled = false;
+                
+                // Clear year selection
+                yearSelect.innerHTML = '<option value="">Select Year</option>';
+                yearSelect.disabled = true;
+            } catch (error) {
+                console.error('Error loading models:', error);
+            }
+        });
+        
+        // Handle search button click
+        searchBtn.addEventListener('click', function() {
+            const brandId = brandSelect.value;
+            const modelId = modelSelect.value;
+            const year = yearSelect.value;
+            
+            if (!brandId) {
+                alert('Please select a vehicle brand');
+                return;
+            }
+            
+            // Build query string
+            const params = new URLSearchParams();
+            if (brandId) params.append('brand_id', brandId);
+            if (modelId) params.append('model_id', modelId);
+            if (year) params.append('year', year);
+            
+            // Redirect to products page with filters
+            window.location.href = `/shop/products?${params.toString()}`;
+        });
+        
+        // Newsletter form
+        const newsletterForm = document.getElementById('newsletter-form');
+        if (newsletterForm) {
+            newsletterForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = this.querySelector('input[type="email"]').value;
+                
+                try {
+                    const response = await fetch('/api/newsletter/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email: email })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        alert('Thank you for subscribing!');
+                        this.reset();
+                    } else {
+                        alert(data.message || 'Subscription failed');
+                    }
+                } catch (error) {
+                    console.error('Newsletter error:', error);
+                    alert('Something went wrong. Please try again.');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
