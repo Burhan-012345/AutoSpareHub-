@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - {{ order.order_number }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #0A1F44 0%, #1a2f5d 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .logo span {
+            color: #FF8C00;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .order-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .order-header h1 {
+            color: #0A1F44;
+            margin-bottom: 10px;
+        }
+        
+        .order-number {
+            font-size: 24px;
+            color: #FF8C00;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            color: #0A1F44;
+            font-weight: 600;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .table th {
+            background: #0A1F44;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .table tfoot td {
+            font-weight: 600;
+            background: #f8f9fa;
+        }
+        
+        .totals {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .total-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .grand-total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0A1F44;
+            border-top: 2px solid #0A1F44;
+            padding-top: 15px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: #0A1F44;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .cta-button:hover {
+            background: #05152d;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .social-icons {
+            margin: 20px 0;
+        }
+        
+        .social-icons a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #0A1F44;
+            font-size: 20px;
+        }
+        
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .table {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-car"></i> Auto<span>SpareHub</span>
+            </div>
+            <p>Premium Auto Parts & Accessories</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            <!-- Order Header -->
+            <div class="order-header">
+                <h1>Order Confirmed!</h1>
+                <p>Thank you for your purchase, {{ user.name }}!</p>
+                <div class="order-number">{{ order.order_number }}</div>
+                <div class="status-badge">Order Placed</div>
+            </div>
+            
+            <!-- Order Details -->
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Order Date:</span>
+                    <span class="info-value">{{ order.created_at.strftime('%d %B, %Y %I:%M %p') }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Estimated Delivery:</span>
+                    <span class="info-value">
+                        {{ (order.created_at + timedelta(days=3)).strftime('%A, %d %B %Y') }}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Method:</span>
+                    <span class="info-value">
+                        {% if order.payment_method == 'cod' %}
+                        Cash on Delivery
+                        {% else %}
+                        Online Payment
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Order Items -->
+            <h3 style="color: #0A1F44; margin-bottom: 15px;">Order Summary</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.product_name }}</strong><br>
+                            <small>Part #: {{ item.part_number }}</small>
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td>₹{{ "%.2f"|format(item.total_price) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Totals -->
+            <div class="totals">
+                <div class="total-row">
+                    <span>Subtotal:</span>
+                    <span>₹{{ "%.2f"|format(order.subtotal) }}</span>
+                </div>
+                <div class="total-row">
+                    <span>Tax (GST):</span>
+                    <span>₹{{ "%.2f"|format(order.tax_amount) }}</span>
+                </div>
+                <div class="total-row">
+                    <span>Shipping:</span>
+                    <span>₹{{ "%.2f"|format(order.shipping_amount) }}</span>
+                </div>
+                <div class="total-row grand-total">
+                    <span>Total Amount:</span>
+                    <span>₹{{ "%.2f"|format(order.total_amount) }}</span>
+                </div>
+            </div>
+            
+            <!-- Shipping Address -->
+            <h3 style="color: #0A1F44; margin-bottom: 15px;">Shipping Address</h3>
+            <div class="info-box">
+                <p><strong>{{ order.address.full_name }}</strong></p>
+                <p>{{ order.address.address_line1 }}</p>
+                {% if order.address.address_line2 %}
+                <p>{{ order.address.address_line2 }}</p>
+                {% endif %}
+                <p>{{ order.address.city }}, {{ order.address.state }} - {{ order.address.postal_code }}</p>
+                <p>{{ order.address.country }}</p>
+                <p>Phone: {{ order.address.phone }}</p>
+            </div>
+            
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ app_url }}/user/orders/{{ order.id }}" class="cta-button">
+                    View Order Details
+                </a>
+                <p style="color: #6c757d; margin-top: 10px;">
+                    You can track your order from your account dashboard.
+                </p>
+            </div>
+            
+            <!-- Next Steps -->
+            <div style="background: #f0f8ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h4 style="color: #0A1F44; margin-bottom: 15px;">What's Next?</h4>
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div style="background: #0A1F44; color: white; width: 30px; height: 30px; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; margin-right: 15px; font-weight: bold;">
+                        1
+                    </div>
+                    <div>
+                        <strong>Order Confirmation</strong>
+                        <p style="margin: 5px 0 0; color: #6c757d;">Your order has been received and is being processed.</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; margin-bottom: 15px;">
+                    <div style="background: #f8f9fa; color: #6c757d; width: 30px; height: 30px; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; margin-right: 15px; font-weight: bold;">
+                        2
+                    </div>
+                    <div>
+                        <strong>Order Processing</strong>
+                        <p style="margin: 5px 0 0; color: #6c757d;">We'll prepare your items for shipping.</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div style="background: #f8f9fa; color: #6c757d; width: 30px; height: 30px; 
+                                border-radius: 50%; display: flex; align-items: center; 
+                                justify-content: center; margin-right: 15px; font-weight: bold;">
+                        3
+                    </div>
+                    <div>
+                        <strong>Shipping & Delivery</strong>
+                        <p style="margin: 5px 0 0; color: #6c757d;">Your order will be shipped within 24 hours.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Support Info -->
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; 
+                        border-top: 1px solid #dee2e6;">
+                <h4 style="color: #0A1F44; margin-bottom: 15px;">Need Help?</h4>
+                <p style="color: #6c757d; margin-bottom: 20px;">
+                    If you have any questions about your order, please contact our 
+                    customer support team.
+                </p>
+                <p>
+                    <strong>Email:</strong> support@autosparehub.com<br>
+                    <strong>Phone:</strong> +1 (555) 123-4567<br>
+                    <strong>Hours:</strong> Mon-Sat, 9:00 AM - 8:00 PM
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="social-icons">
+                <a href="#"><i class="fab fa-facebook"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+                <a href="#"><i class="fab fa-linkedin"></i></a>
+            </div>
+            <p>© {{ now.year }} AutoSpareHub. All rights reserved.</p>
+            <p>
+                123 Auto Street, Mechanic City, Vehicle State 12345<br>
+                <a href="{{ app_url }}" style="color: #0A1F44;">{{ app_url }}</a>
+            </p>
+            <p style="font-size: 12px; margin-top: 20px;">
+                This email was sent to {{ user.email }}. 
+                If you did not place this order, please contact us immediately.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
