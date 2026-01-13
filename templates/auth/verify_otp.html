@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% block title %}Verify OTP - AutoSpareHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Brand Logo -->
+                    <div class="text-center mb-4">
+                        <a href="{{ url_for('index') }}" class="text-decoration-none">
+                            <h2 class="text-primary">
+                                <i class="fas fa-car"></i> Auto<span class="text-secondary">SpareHub</span>
+                            </h2>
+                        </a>
+                        <h4 class="text-center mb-2">Verify Your Identity</h4>
+                        <p class="text-muted">Enter the OTP sent to your email/phone</p>
+                    </div>
+                    
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <!-- OTP Info -->
+                    <div class="alert alert-info mb-4">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-mobile-alt fa-2x me-3"></i>
+                            <div>
+                                <h6 class="mb-1">One-Time Password Sent</h6>
+                                <p class="mb-0">We've sent a 6-digit code to {{ contact_info }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OTP Form -->
+                    <form method="POST" action="{{ url_for('auth.verify_otp') }}" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- OTP Input -->
+                        <div class="mb-4">
+                            <label for="otp" class="form-label">
+                                <i class="fas fa-shield-alt me-1"></i>6-Digit Verification Code
+                            </label>
+                            <div class="otp-input-container mb-3">
+                                <div class="d-flex justify-content-between">
+                                    {% for i in range(6) %}
+                                    <input type="text" 
+                                           class="form-control otp-digit text-center" 
+                                           maxlength="1" 
+                                           data-index="{{ i }}"
+                                           style="width: 45px; height: 45px; font-size: 1.2rem;">
+                                    {% endfor %}
+                                </div>
+                                <input type="hidden" name="otp" id="otp">
+                            </div>
+                            {% if form.otp.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.otp.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted mt-1 d-block">
+                                Enter the 6-digit code you received
+                            </small>
+                        </div>
+                        
+                        <!-- Timer -->
+                        <div class="text-center mb-4">
+                            <div id="otp-timer" class="text-primary fw-bold">02:00</div>
+                            <small class="text-muted">Time remaining to enter OTP</small>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-primary btn-lg" id="verify-btn">
+                                <i class="fas fa-check-circle me-2"></i>Verify & Continue
+                            </button>
+                        </div>
+                        
+                        <!-- Resend OTP -->
+                        <div class="text-center mb-3">
+                            <p class="mb-2">Didn't receive the code?</p>
+                            <button type="button" class="btn btn-outline-primary" id="resend-otp" disabled>
+                                Resend OTP <span id="resend-timer">(60s)</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Cancel -->
+                        <div class="text-center">
+                            <a href="{{ url_for('auth.login') }}" class="text-decoration-none">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Login
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Security Info -->
+                <div class="card-footer text-center py-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        For your security, this OTP expires in 2 minutes
+                    </small>
+                </div>
+            </div>
+            
+            <!-- Troubleshooting -->
+            <div class="text-center mt-4">
+                <button class="btn btn-link text-decoration-none" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#troubleshoot">
+                    <i class="fas fa-question-circle me-1"></i>Need help?
+                </button>
+                
+                <div class="collapse mt-3" id="troubleshoot">
+                    <div class="card card-body text-start">
+                        <h6>Troubleshooting:</h6>
+                        <ul class="mb-0 small">
+                            <li class="mb-1">• Check your spam/junk folder</li>
+                            <li class="mb-1">• Ensure you have network connectivity</li>
+                            <li class="mb-1">• Wait for the timer to expire to request a new code</li>
+                            <li class="mb-1">• Make sure you entered the correct email/phone</li>
+                            <li>• Contact support if issues persist</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support Modal -->
+<div class="modal fade" id="supportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Verification Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>If you're having trouble with verification, please:</p>
+                <ol>
+                    <li>Wait for the timer to expire, then click "Resend OTP"</li>
+                    <li>Check all your email folders including spam</li>
+                    <li>Ensure your phone can receive SMS</li>
+                    <li>Contact support if you need further assistance</li>
+                </ol>
+                <div class="mt-3">
+                    <h6>Contact Support:</h6>
+                    <p class="mb-1">
+                        <i class="fas fa-envelope me-2"></i>
+                        support@autosparehub.com
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-phone me-2"></i>
+                        +1 (555) 123-4567
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="contact-support">
+                    <i class="fas fa-headset me-1"></i>Contact Support
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // OTP Input Handling
+    const otpDigits = document.querySelectorAll('.otp-digit');
+    const otpHidden = document.getElementById('otp');
+    const verifyBtn = document.getElementById('verify-btn');
+    
+    // Focus first digit
+    otpDigits[0].focus();
+    
+    // Handle digit input
+    otpDigits.forEach((digit, index) => {
+        digit.addEventListener('input', function() {
+            const value = this.value;
+            
+            // Only allow numbers
+            if (!/^\d*$/.test(value)) {
+                this.value = '';
+                return;
+            }
+            
+            // Move to next digit if current is filled
+            if (value.length === 1 && index < otpDigits.length - 1) {
+                otpDigits[index + 1].focus();
+            }
+            
+            // Update hidden field
+            updateOTPValue();
+        });
+        
+        // Handle backspace
+        digit.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && this.value === '' && index > 0) {
+                otpDigits[index - 1].focus();
+            }
+        });
+        
+        // Handle paste
+        digit.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text').trim();
+            
+            if (/^\d{6}$/.test(pastedData)) {
+                // Fill all digits with pasted data
+                pastedData.split('').forEach((char, i) => {
+                    if (otpDigits[i]) {
+                        otpDigits[i].value = char;
+                    }
+                });
+                updateOTPValue();
+                verifyBtn.focus();
+            }
+        });
+    });
+    
+    function updateOTPValue() {
+        let otpValue = '';
+        otpDigits.forEach(digit => {
+            otpValue += digit.value;
+        });
+        otpHidden.value = otpValue;
+        
+        // Enable/disable verify button
+        verifyBtn.disabled = otpValue.length !== 6;
+    }
+    
+    // OTP Timer
+    let otpTimer = 120; // 2 minutes in seconds
+    const otpTimerEl = document.getElementById('otp-timer');
+    
+    function updateOTPTimer() {
+        const minutes = Math.floor(otpTimer / 60);
+        const seconds = otpTimer % 60;
+        otpTimerEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (otpTimer > 0) {
+            otpTimer--;
+            setTimeout(updateOTPTimer, 1000);
+        } else {
+            otpTimerEl.textContent = '00:00';
+            otpTimerEl.classList.remove('text-primary');
+            otpTimerEl.classList.add('text-danger');
+            
+            // Show expired message
+            const expiredMsg = document.createElement('div');
+            expiredMsg.className = 'alert alert-warning alert-dismissible fade show mt-2';
+            expiredMsg.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                OTP has expired. Please request a new one.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            otpTimerEl.parentNode.appendChild(expiredMsg);
+        }
+    }
+    
+    // Start OTP timer
+    updateOTPTimer();
+    
+    // Resend OTP Timer
+    let resendTimer = 60;
+    const resendBtn = document.getElementById('resend-otp');
+    const resendTimerEl = document.getElementById('resend-timer');
+    
+    function updateResendTimer() {
+        resendTimerEl.textContent = `(${resendTimer}s)`;
+        
+        if (resendTimer > 0) {
+            resendTimer--;
+            setTimeout(updateResendTimer, 1000);
+        } else {
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = 'Resend OTP';
+            resendTimerEl.style.display = 'none';
+        }
+    }
+    
+    // Start resend timer
+    updateResendTimer();
+    
+    // Resend OTP functionality
+    resendBtn.addEventListener('click', async function() {
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+        
+        try {
+            const response = await fetch('/auth/resend-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    contact: '{{ contact_info }}',
+                    purpose: '{{ purpose }}'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Reset timers
+                otpTimer = 120;
+                resendTimer = 60;
+                
+                // Reset OTP input
+                otpDigits.forEach(digit => {
+                    digit.value = '';
+                });
+                updateOTPValue();
+                otpDigits[0].focus();
+                
+                // Reset timer displays
+                otpTimerEl.textContent = '02:00';
+                otpTimerEl.classList.remove('text-danger');
+                otpTimerEl.classList.add('text-primary');
+                
+                // Restart timers
+                updateOTPTimer();
+                updateResendTimer();
+                
+                // Show success message
+                showNotification('New OTP sent successfully!', 'success');
+                
+            } else {
+                throw new Error(data.message || 'Failed to resend OTP');
+            }
+            
+        } catch (error) {
+            console.error('Resend error:', error);
+            showNotification(error.message || 'Failed to resend OTP', 'error');
+            this.disabled = false;
+            this.innerHTML = 'Resend OTP';
+        }
+    });
+    
+    // Form validation
+    const form = document.querySelector('form');
+    
+    form.addEventListener('submit', function(e) {
+        const otpValue = otpHidden.value;
+        
+        if (otpValue.length !== 6) {
+            e.preventDefault();
+            
+            // Show error
+            showNotification('Please enter a valid 6-digit OTP', 'error');
+            
+            // Shake animation
+            otpDigits.forEach(digit => {
+                digit.classList.add('animate-shake');
+                setTimeout(() => {
+                    digit.classList.remove('animate-shake');
+                }, 500);
+            });
+        }
+        
+        if (otpTimer <= 0) {
+            e.preventDefault();
+            showNotification('OTP has expired. Please request a new one.', 'error');
+        }
+    });
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+    
+    // Support modal
+    document.getElementById('contact-support')?.addEventListener('click', function() {
+        window.location.href = 'mailto:support@autosparehub.com';
+    });
+</script>
+
+<style>
+    .otp-digit {
+        transition: all 0.3s ease;
+    }
+    
+    .otp-digit:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(10, 31, 68, 0.25);
+        transform: scale(1.05);
+    }
+    
+    .otp-digit.filled {
+        background-color: rgba(10, 31, 68, 0.05);
+        border-color: var(--primary-color);
+    }
+    
+    #otp-timer {
+        font-size: 1.5rem;
+        letter-spacing: 2px;
+    }
+    
+    .animate-shake {
+        animation: shake 0.5s;
+    }
+    
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+</style>
+{% endblock %}
