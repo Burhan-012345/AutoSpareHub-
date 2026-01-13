@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block title %}Search Results - AutoSpareHub{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Search Header -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item active">Search</li>
+                </ol>
+            </nav>
+            
+            <h1 class="mb-3">Search Results</h1>
+            
+            <!-- Search Box -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('shop.search') }}" class="row g-3">
+                        <div class="col-md-10">
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-primary text-white">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="q" 
+                                       value="{{ query }}"
+                                       placeholder="Search for auto parts, accessories, brands..."
+                                       autocomplete="off"
+                                       aria-label="Search">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">
+                                Search
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Search Tips -->
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Try searching by: part number, vehicle model, brand name, or product category
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Search Stats -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <p class="mb-0">
+                        <span class="text-primary fw-bold">{{ products|length }}</span> results found
+                        {% if query %}
+                        for "<span class="text-primary fw-bold">{{ query }}</span>"
+                        {% endif %}
+                    </p>
+                </div>
+                <div>
+                    <!-- Sort Options -->
+                    <div class="dropdown d-inline-block">
+                        <button class="btn btn-outline-primary dropdown-toggle" type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-sort me-2"></i>Sort by
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('shop.search', q=query, sort='relevance') }}">Relevance</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('shop.search', q=query, sort='price_asc') }}">Price: Low to High</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('shop.search', q=query, sort='price_desc') }}">Price: High to Low</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('shop.search', q=query, sort='newest') }}">Newest First</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('shop.search', q=query, sort='rating') }}">Highest Rated</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search Results -->
+    {% if products %}
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Refine Results</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Category Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">Categories</h6>
+                        <div class="list-group list-group-flush">
+                            {% for category in categories[:5] %}
+                            <label class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <input class="form-check-input me-2" type="checkbox">
+                                    {{ category.name }}
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">{{ category.products|length }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Price Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">Price Range</h6>
+                        <div class="mb-3">
+                            <input type="range" class="form-range" min="0" max="10000" step="100" 
+                                   id="price-range">
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">₹0</span>
+                            <span class="text-muted">₹10,000</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Brand Filter -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">Brands</h6>
+                        <div class="list-group list-group-flush">
+                            {% for brand in brands[:5] %}
+                            <label class="list-group-item">
+                                <input class="form-check-input me-2" type="checkbox">
+                                {{ brand.name }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Apply Filters -->
+                    <button class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </div>
+            
+            <!-- Popular Searches -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Popular Searches</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for popular in popular_searches %}
+                        <a href="{{ url_for('shop.search', q=popular) }}" 
+                           class="badge bg-secondary text-decoration-none">
+                            {{ popular }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Grid -->
+        <div class="col-lg-9">
+            <div class="row" id="search-results">
+                {% for product in products %}
+                <div class="col-xl-4 col-lg-4 col-md-6 mb-4">
+                    {% include 'components/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- No Results Message -->
+            {% if products|length == 0 %}
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-search fa-4x text-muted"></i>
+                </div>
+                <h3 class="text-muted mb-3">No results found</h3>
+                <p class="text-muted mb-4">
+                    We couldn't find any products matching "{{ query }}"
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{{ url_for('shop.products') }}" class="btn btn-primary">
+                        <i class="fas fa-shopping-bag me-2"></i>Browse All Products
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="clearSearch()">
+                        <i class="fas fa-times me-2"></i>Clear Search
+                    </button>
+                </div>
+                
+                <!-- Search Suggestions -->
+                <div class="mt-5">
+                    <h5 class="mb-3">Search Suggestions:</h5>
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        {% for suggestion in suggestions %}
+                        <a href="{{ url_for('shop.search', q=suggestion) }}" 
+                           class="btn btn-outline-secondary btn-sm">
+                            {{ suggestion }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Pagination -->
+            {% if pagination and pagination.pages > 1 %}
+            <nav aria-label="Search results navigation" class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('shop.search', q=query, page=pagination.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page in pagination.iter_pages() %}
+                        {% if page %}
+                            <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('shop.search', q=query, page=page) }}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('shop.search', q=query, page=pagination.next_num) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- No Search Query -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-search fa-4x text-primary"></i>
+            </div>
+            <h3 class="mb-3">What are you looking for?</h3>
+            <p class="text-muted mb-4">
+                Search for auto parts, accessories, or browse our categories
+            </p>
+            
+            <!-- Search Categories -->
+            <div class="row mt-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-cogs fa-2x text-primary"></i>
+                            </div>
+                            <h5>Engine Parts</h5>
+                            <p class="text-muted small">Filters, belts, pumps, and more</p>
+                            <a href="{{ url_for('shop.category', slug='engine') }}" 
+                               class="btn btn-sm btn-outline-primary">Browse</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-tools fa-2x text-primary"></i>
+                            </div>
+                            <h5>Tools & Equipment</h5>
+                            <p class="text-muted small">Professional auto repair tools</p>
+                            <a href="{{ url_for('shop.category', slug='tools') }}" 
+                               class="btn btn-sm btn-outline-primary">Browse</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <i class="fas fa-oil-can fa-2x text-primary"></i>
+                            </div>
+                            <h5>Fluids & Chemicals</h5>
+                            <p class="text-muted small">Oils, lubricants, cleaners</p>
+                            <a href="{{ url_for('shop.category', slug='fluids') }}" 
+                               class="btn btn-sm btn-outline-primary">Browse</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Recently Viewed -->
+    {% if recent_products %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3 class="mb-4">Recently Viewed</h3>
+            <div class="row">
+                {% for product in recent_products[:4] %}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    {% include 'components/product_card.html' %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Search Modal for Suggestions -->
+<div class="modal fade" id="searchSuggestionsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Search Suggestions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="suggestions-container">
+                    <!-- Suggestions will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    const searchInput = document.querySelector('input[name="q"]');
+    const searchForm = document.querySelector('form');
+    let searchTimeout;
+    
+    // Auto-suggest functionality
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        
+        const query = this.value.trim();
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+    });
+    
+    // Fetch search suggestions
+    async function fetchSuggestions(query) {
+        try {
+            const response = await fetch(`/api/search/suggest?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.suggestions && data.suggestions.length > 0) {
+                showSuggestions(data.suggestions);
+            } else {
+                hideSuggestions();
+            }
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            hideSuggestions();
+        }
+    }
+    
+    // Show suggestions dropdown
+    function showSuggestions(suggestions) {
+        let container = document.getElementById('suggestions-dropdown');
+        
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'suggestions-dropdown';
+            container.className = 'dropdown-menu show w-100';
+            container.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                max-height: 300px;
+                overflow-y: auto;
+            `;
+            
+            searchInput.parentNode.appendChild(container);
+        }
+        
+        container.innerHTML = suggestions.map(suggestion => `
+            <a class="dropdown-item" href="/shop/search?q=${encodeURIComponent(suggestion)}">
+                <i class="fas fa-search me-2 text-muted"></i>${suggestion}
+            </a>
+        `).join('');
+    }
+    
+    // Hide suggestions
+    function hideSuggestions() {
+        const container = document.getElementById('suggestions-dropdown');
+        if (container) {
+            container.remove();
+        }
+    }
+    
+    // Clear search
+    function clearSearch() {
+        searchInput.value = '';
+        window.location.href = '/shop/search';
+    }
+    
+    // Price range filter
+    const priceRange = document.getElementById('price-range');
+    if (priceRange) {
+        const priceValue = document.createElement('div');
+        priceValue.className = 'text-center mt-2';
+        priceValue.innerHTML = `
+            <span class="badge bg-primary">Up to ₹<span id="price-value">${priceRange.value}</span></span>
+        `;
+        priceRange.parentNode.appendChild(priceValue);
+        
+        priceRange.addEventListener('input', function() {
+            document.getElementById('price-value').textContent = this.value;
+        });
+    }
+    
+    // Filter checkboxes
+    document.querySelectorAll('.form-check-input').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            applyFilters();
+        });
+    });
+    
+    // Apply filters
+    async function applyFilters() {
+        const filters = {
+            categories: [],
+            brands: [],
+            minPrice: 0,
+            maxPrice: priceRange ? priceRange.value : 10000
+        };
+        
+        // Collect selected filters
+        document.querySelectorAll('.form-check-input:checked').forEach(checkbox => {
+            const label = checkbox.closest('label');
+            if (label.textContent.includes('Category')) {
+                filters.categories.push(label.textContent.trim());
+            } else if (label.textContent.includes('Brand')) {
+                filters.brands.push(label.textContent.trim());
+            }
+        });
+        
+        // In a real implementation, this would filter the results
+        console.log('Applying filters:', filters);
+        
+        // Show loading
+        const resultsContainer = document.getElementById('search-results');
+        if (resultsContainer) {
+            resultsContainer.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Applying filters...</p>
+                </div>
+            `;
+        }
+        
+        // Simulate API call
+        setTimeout(() => {
+            // In real app, reload page with filter parameters
+            // window.location.href = updateUrlWithFilters(filters);
+        }, 1000);
+    }
+    
+    // Handle form submission with filters
+    searchForm.addEventListener('submit', function(e) {
+        const query = searchInput.value.trim();
+        if (!query) {
+            e.preventDefault();
+            showNotification('Please enter a search term', 'warning');
+            searchInput.focus();
+        }
+    });
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+    
+    // Initialize search input focus
+    document.addEventListener('DOMContentLoaded', function() {
+        if (searchInput && !searchInput.value) {
+            searchInput.focus();
+        }
+        
+        // Load search history
+        loadSearchHistory();
+    });
+    
+    // Load search history
+    function loadSearchHistory() {
+        const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        
+        if (history.length > 0) {
+            const historyContainer = document.getElementById('search-history');
+            if (historyContainer) {
+                historyContainer.innerHTML = history.slice(0, 5).map(item => `
+                    <a href="/shop/search?q=${encodeURIComponent(item)}" 
+                       class="list-group-item list-group-item-action">
+                        <i class="fas fa-history me-2 text-muted"></i>${item}
+                    </a>
+                `).join('');
+            }
+        }
+    }
+    
+    // Save search to history
+    function saveToSearchHistory(query) {
+        if (!query.trim()) return;
+        
+        let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        
+        // Remove if already exists
+        history = history.filter(item => item.toLowerCase() !== query.toLowerCase());
+        
+        // Add to beginning
+        history.unshift(query);
+        
+        // Keep only last 10 searches
+        history = history.slice(0, 10);
+        
+        localStorage.setItem('searchHistory', JSON.stringify(history));
+    }
+</script>
+
+<style>
+    .search-highlight {
+        background-color: rgba(255, 140, 0, 0.1);
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
+    
+    #suggestions-dropdown {
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 0.375rem 0.375rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    #suggestions-dropdown .dropdown-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    #suggestions-dropdown .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    #suggestions-dropdown .dropdown-item:hover {
+        background-color: var(--light-gray);
+        color: var(--primary-color);
+    }
+    
+    .search-category-card {
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .search-category-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-5px);
+    }
+</style>
+{% endblock %}

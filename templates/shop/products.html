@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Products - AutoSpareHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .price-range-slider {
+        width: 100%;
+    }
+    
+    .filter-card {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .sort-dropdown .dropdown-menu {
+        min-width: 200px;
+    }
+    
+    .product-image-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+    
+    .product-badges {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+    }
+    
+    .product-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                    <li class="breadcrumb-item active">Products</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                {% if search_query %}
+                    Search Results: "{{ search_query }}"
+                {% elif category %}
+                    {{ category.name }}
+                {% else %}
+                    All Products
+                {% endif %}
+            </h1>
+            <p class="text-muted">
+                Showing {{ pagination.total }} products
+                {% if search_query %}
+                    matching "{{ search_query }}"
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4">
+            <div class="d-flex justify-content-end align-items-center h-100">
+                <!-- Sort Dropdown -->
+                <div class="dropdown sort-dropdown me-3">
+                    <button class="btn btn-outline-primary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-sort me-2"></i>
+                        Sort by: 
+                        {% if request.args.get('sort_by') == 'price' and request.args.get('sort_order') == 'asc' %}
+                            Price: Low to High
+                        {% elif request.args.get('sort_by') == 'price' and request.args.get('sort_order') == 'desc' %}
+                            Price: High to Low
+                        {% elif request.args.get('sort_by') == 'name' %}
+                            Name
+                        {% elif request.args.get('sort_by') == 'discount' %}
+                            Discount
+                        {% else %}
+                            Newest
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="{{ update_query_param(sort_by='created_at', sort_order='desc') }}">
+                                <i class="fas fa-calendar-alt me-2"></i>Newest First
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ update_query_param(sort_by='price', sort_order='asc') }}">
+                                <i class="fas fa-rupee-sign me-2"></i>Price: Low to High
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ update_query_param(sort_by='price', sort_order='desc') }}">
+                                <i class="fas fa-rupee-sign me-2"></i>Price: High to Low
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ update_query_param(sort_by='name', sort_order='asc') }}">
+                                <i class="fas fa-sort-alpha-down me-2"></i>Name: A to Z
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ update_query_param(sort_by='discount', sort_order='desc') }}">
+                                <i class="fas fa-percentage me-2"></i>Best Discount
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- View Toggle -->
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" id="grid-view">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="list-view">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-lg-3">
+            <div class="card filter-card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter me-2"></i>Filters
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="product-filters" method="GET">
+                        <!-- Search -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Search</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="q" 
+                                       value="{{ search_query }}" placeholder="Search products...">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Price Range -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Price Range</label>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Min: ₹0</span>
+                                <span class="text-muted">Max: ₹{{ max_price|default(10000) }}</span>
+                            </div>
+                            <input type="range" class="form-range price-range-slider" 
+                                   min="0" max="{{ max_price|default(10000) }}" step="100"
+                                   value="{{ request.args.get('max_price', max_price|default(10000)) }}"
+                                   name="max_price" id="price-range">
+                            <div class="text-center mt-2">
+                                <span class="badge bg-primary" id="price-value">
+                                    Up to ₹{{ request.args.get('max_price', max_price|default(10000)) }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Categories -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Categories</label>
+                            <div class="list-group list-group-flush">
+                                {% for cat in categories %}
+                                <label class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <input class="form-check-input me-2 category-filter" 
+                                               type="checkbox" name="category_id" value="{{ cat.id }}"
+                                               {% if cat.id|string in request.args.getlist('category_id') %}checked{% endif %}>
+                                        {{ cat.name }}
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill">{{ cat.products|length }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Vehicle Brands -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Vehicle Brands</label>
+                            <select class="form-select" name="brand_id">
+                                <option value="">All Brands</option>
+                                {% for brand in brands %}
+                                <option value="{{ brand.id }}" 
+                                        {% if request.args.get('brand_id')|string == brand.id|string %}selected{% endif %}>
+                                    {{ brand.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Availability -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Availability</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="in_stock" 
+                                       id="in_stock" value="true"
+                                       {% if request.args.get('in_stock') %}checked{% endif %}>
+                                <label class="form-check-label" for="in_stock">
+                                    In Stock Only
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Filter Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="apply-filters">
+                                <i class="fas fa-check me-2"></i>Apply Filters
+                            </button>
+                            <a href="{{ url_for('shop.products') }}" class="btn btn-outline-secondary" id="clear-filters">
+                                <i class="fas fa-times me-2"></i>Clear All
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Promo Banner -->
+            <div class="card bg-warning text-dark shadow-sm mb-4">
+                <div class="card-body text-center">
+                    <h5 class="mb-2">Free Shipping!</h5>
+                    <p class="small mb-0">On orders above ₹2000</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Grid -->
+        <div class="col-lg-9">
+            {% if products %}
+                <div class="row" id="products-container">
+                    {% for product in products %}
+                    <div class="col-xl-3 col-lg-4 col-md-4 col-sm-6 mb-4">
+                        {% include 'components/product_card.html' %}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% if pagination.pages > 1 %}
+                <nav aria-label="Page navigation" class="mt-5">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('shop.products', page=pagination.prev_num, **request.args) }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for page in pagination.iter_pages() %}
+                            {% if page %}
+                                <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('shop.products', page=page, **request.args) }}">
+                                        {{ page }}
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('shop.products', page=pagination.next_num, **request.args) }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    <p class="text-center text-muted mt-2">
+                        Page {{ pagination.page }} of {{ pagination.pages }}
+                    </p>
+                </nav>
+                {% endif %}
+            {% else %}
+                <!-- No Products Found -->
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-search fa-4x text-muted"></i>
+                    </div>
+                    <h3 class="text-muted mb-3">No Products Found</h3>
+                    <p class="text-muted mb-4">
+                        {% if search_query %}
+                            No products found matching "{{ search_query }}"
+                        {% else %}
+                            No products available in this category
+                        {% endif %}
+                    </p>
+                    <a href="{{ url_for('shop.products') }}" class="btn btn-primary">
+                        <i class="fas fa-shopping-bag me-2"></i>Browse All Products
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // View toggle
+    const gridViewBtn = document.getElementById('grid-view');
+    const listViewBtn = document.getElementById('list-view');
+    const productsContainer = document.getElementById('products-container');
+    
+    gridViewBtn.addEventListener('click', function() {
+        this.classList.add('active');
+        listViewBtn.classList.remove('active');
+        productsContainer.classList.remove('list-view');
+        productsContainer.classList.add('grid-view');
+    });
+    
+    listViewBtn.addEventListener('click', function() {
+        this.classList.add('active');
+        gridViewBtn.classList.remove('active');
+        productsContainer.classList.remove('grid-view');
+        productsContainer.classList.add('list-view');
+    });
+    
+    // Price range slider
+    const priceRange = document.getElementById('price-range');
+    const priceValue = document.getElementById('price-value');
+    
+    if (priceRange && priceValue) {
+        priceRange.addEventListener('input', function() {
+            priceValue.textContent = `Up to ₹${this.value}`;
+        });
+    }
+    
+    // Quick add to cart
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.quick-add-to-cart')) {
+            e.preventDefault();
+            const button = e.target.closest('.quick-add-to-cart');
+            const productId = button.dataset.productId;
+            
+            addToCart(productId, 1, button);
+        }
+    });
+    
+    async function addToCart(productId, quantity, button) {
+        // Show loading
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch('/cart/add/' + productId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `quantity=${quantity}`
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update cart count
+                updateCartCount(data.cart_count);
+                
+                // Show success animation
+                button.classList.add('cart-add-animation');
+                showNotification(data.message, 'success');
+                
+                // Reset button
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    button.classList.remove('cart-add-animation');
+                }, 500);
+            } else {
+                showNotification(data.message, 'error');
+                button.innerHTML = originalHTML;
+                button.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            showNotification('Failed to add to cart', 'error');
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }
+    }
+    
+    function updateCartCount(count) {
+        const cartBadge = document.querySelector('.cart-count');
+        const cartLink = document.querySelector('.cart-badge');
+        
+        if (count > 0) {
+            if (cartBadge) {
+                cartBadge.textContent = count;
+            } else if (cartLink) {
+                const badge = document.createElement('span');
+                badge.className = 'cart-count';
+                badge.textContent = count;
+                cartLink.appendChild(badge);
+            }
+        } else if (cartBadge) {
+            cartBadge.remove();
+        }
+    }
+    
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} notification-slide`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    // Initialize filters
+    document.getElementById('apply-filters').addEventListener('click', function() {
+        const form = document.getElementById('product-filters');
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+        
+        // Add all form data to params
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        // Redirect with filters
+        window.location.href = `${window.location.pathname}?${params.toString()}`;
+    });
+</script>
+
+<!-- List View CSS -->
+<style>
+    .list-view .col-md-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .list-view .product-card {
+        flex-direction: row !important;
+        height: auto;
+    }
+    
+    .list-view .product-card .card-img-top {
+        width: 200px;
+        height: 200px;
+        border-radius: 8px 0 0 8px !important;
+    }
+    
+    .list-view .product-card .card-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .list-view .product-card .card-title {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .list-view .product-card .card-text {
+        margin-bottom: 1rem;
+    }
+    
+    .list-view .product-card .product-actions {
+        margin-top: auto;
+    }
+    
+    @media (max-width: 768px) {
+        .list-view .product-card {
+            flex-direction: column !important;
+        }
+        
+        .list-view .product-card .card-img-top {
+            width: 100%;
+            height: 200px;
+            border-radius: 8px 8px 0 0 !important;
+        }
+    }
+</style>
+{% endblock %}
