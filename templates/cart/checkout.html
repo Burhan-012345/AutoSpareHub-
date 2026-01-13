@@ -1,0 +1,911 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - AutoSpareHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkout-progress {
+        position: relative;
+        padding-bottom: 40px;
+        margin-bottom: 40px;
+    }
+    
+    .checkout-progress::after {
+        content: '';
+        position: absolute;
+        bottom: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--border-color);
+        z-index: 1;
+    }
+    
+    .progress-step {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+    }
+    
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--light-gray);
+        color: var(--gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: 600;
+        border: 3px solid white;
+    }
+    
+    .progress-step.active .step-number {
+        background: var(--primary-color);
+        color: white;
+    }
+    
+    .progress-step.completed .step-number {
+        background: var(--success-color);
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 0.875rem;
+        color: var(--gray);
+        font-weight: 500;
+    }
+    
+    .progress-step.active .step-label {
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .address-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .address-card:hover {
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+    
+    .address-card.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(10, 31, 68, 0.05);
+    }
+    
+    .address-card .selected-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: none;
+    }
+    
+    .address-card.selected .selected-badge {
+        display: block;
+    }
+    
+    .payment-method-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .payment-method-card:hover {
+        border-color: var(--primary-color);
+    }
+    
+    .payment-method-card.selected {
+        border-color: var(--primary-color);
+        background-color: rgba(10, 31, 68, 0.05);
+    }
+    
+    .order-summary-item {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .order-summary-item:last-child {
+        border-bottom: none;
+    }
+    
+    .coupon-input {
+        transition: all 0.3s ease;
+    }
+    
+    .coupon-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(10, 31, 68, 0.25);
+    }
+    
+    .coupon-success {
+        color: var(--success-color);
+        font-weight: 600;
+    }
+    
+    .coupon-error {
+        color: var(--danger-color);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Checkout Progress -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="checkout-progress">
+                <div class="row">
+                    <div class="col-md-4 progress-step completed">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Cart</div>
+                    </div>
+                    <div class="col-md-4 progress-step active">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Checkout</div>
+                    </div>
+                    <div class="col-md-4 progress-step">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Confirmation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Checkout Form -->
+    <form method="POST" action="{{ url_for('cart.checkout') }}" id="checkout-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="row">
+            <!-- Left Column - Shipping & Payment -->
+            <div class="col-lg-8">
+                <!-- Shipping Address -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-map-marker-alt me-2"></i>Shipping Address
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if addresses %}
+                            <div class="row g-3 mb-4" id="address-list">
+                                {% for address in addresses %}
+                                <div class="col-md-6">
+                                    <div class="address-card card h-100 {% if address.is_default %}selected{% endif %}" 
+                                         data-address-id="{{ address.id }}">
+                                        <div class="card-body">
+                                            <div class="selected-badge">
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Selected
+                                                </span>
+                                            </div>
+                                            <h6 class="card-title">{{ address.full_name }}</h6>
+                                            <p class="card-text small mb-1">
+                                                {{ address.address_line1 }}<br>
+                                                {% if address.address_line2 %}
+                                                {{ address.address_line2 }}<br>
+                                                {% endif %}
+                                                {{ address.city }}, {{ address.state }} - {{ address.postal_code }}<br>
+                                                {{ address.country }}
+                                            </p>
+                                            <p class="card-text small mb-2">
+                                                <i class="fas fa-phone"></i> {{ address.phone }}
+                                            </p>
+                                            {% if address.is_default %}
+                                            <span class="badge bg-primary">Default</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="d-flex gap-2 mb-4">
+                                <button type="button" class="btn btn-outline-primary" 
+                                        data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                                    <i class="fas fa-plus me-2"></i>Add New Address
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" 
+                                        data-bs-toggle="modal" data-bs-target="#manageAddressModal">
+                                    <i class="fas fa-edit me-2"></i>Manage Addresses
+                                </button>
+                            </div>
+                            
+                            <input type="hidden" name="address_id" id="selected-address" 
+                                   value="{{ addresses|selectattr('is_default')|first.id }}">
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted mb-3">No Address Added</h5>
+                                <p class="text-muted mb-4">Please add a shipping address to continue</p>
+                                <button type="button" class="btn btn-primary" 
+                                        data-bs-toggle="modal" data-bs-target="#addAddressModal">
+                                    <i class="fas fa-plus me-2"></i>Add New Address
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Payment Method -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-credit-card me-2"></i>Payment Method
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-4">
+                            <!-- Cash on Delivery -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card card h-100 selected" 
+                                     data-payment-method="cod">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Cash on Delivery</h6>
+                                                <p class="small text-muted mb-0">
+                                                    Pay when you receive your order
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Online Payment -->
+                            <div class="col-md-6">
+                                <div class="payment-method-card card h-100" 
+                                     data-payment-method="online">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fas fa-credit-card fa-2x text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1">Online Payment</h6>
+                                                <p class="small text-muted mb-0">
+                                                    Pay securely with card/UPI/net banking
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" name="payment_method" id="selected-payment" value="cod">
+                        
+                        <!-- Payment Details (for online payment) -->
+                        <div id="online-payment-details" class="d-none">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="mb-3">Payment Details</h6>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Card Number</label>
+                                            <input type="text" class="form-control" placeholder="1234 5678 9012 3456">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">Expiry</label>
+                                            <input type="text" class="form-control" placeholder="MM/YY">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">CVV</label>
+                                            <input type="text" class="form-control" placeholder="123">
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label">Cardholder Name</label>
+                                            <input type="text" class="form-control" placeholder="John Doe">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Security -->
+                        <div class="alert alert-info mt-3 mb-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-shield-alt fa-2x me-3"></i>
+                                <div>
+                                    <h6 class="mb-1">Secure Payment</h6>
+                                    <p class="small mb-0">
+                                        Your payment information is encrypted and secure.
+                                        We don't store your card details.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Notes -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Order Notes (Optional)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control" name="notes" rows="4" 
+                                  placeholder="Add special instructions for your order..."></textarea>
+                        <small class="text-muted">
+                            e.g., delivery instructions, gift wrapping, etc.
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column - Order Summary -->
+            <div class="col-lg-4">
+                <div class="card sticky-top" style="top: 20px;">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-receipt me-2"></i>Order Summary
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- Cart Items -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Order Items</h6>
+                            <div class="order-items">
+                                {% for item in cart_items %}
+                                <div class="order-summary-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ item.product.name }}</h6>
+                                            <small class="text-muted">Part #: {{ item.product.part_number }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-semibold">₹{{ "%.2f"|format(item.product.discounted_price * item.quantity) }}</div>
+                                            <small class="text-muted">₹{{ "%.2f"|format(item.product.discounted_price) }} × {{ item.quantity }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Coupon Code -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Coupon Code</h6>
+                            <div class="input-group">
+                                <input type="text" class="form-control coupon-input" 
+                                       placeholder="Enter coupon code" id="coupon-code">
+                                <button class="btn btn-outline-primary" type="button" id="apply-coupon">
+                                    Apply
+                                </button>
+                            </div>
+                            <div id="coupon-message" class="mt-2 small"></div>
+                        </div>
+                        
+                        <!-- Price Breakdown -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">Price Details</h6>
+                            <div class="order-summary-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>Subtotal</span>
+                                    <span>₹{{ "%.2f"|format(subtotal) }}</span>
+                                </div>
+                            </div>
+                            <div class="order-summary-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>Tax (GST)</span>
+                                    <span>₹{{ "%.2f"|format(tax_amount) }}</span>
+                                </div>
+                            </div>
+                            <div class="order-summary-item">
+                                <div class="d-flex justify-content-between">
+                                    <span>Shipping</span>
+                                    <span>₹{{ "%.2f"|format(shipping_amount) }}</span>
+                                </div>
+                            </div>
+                            <div class="order-summary-item" id="discount-row" style="display: none;">
+                                <div class="d-flex justify-content-between text-success">
+                                    <span>Discount</span>
+                                    <span>-₹<span id="discount-amount">0.00</span></span>
+                                </div>
+                            </div>
+                            <div class="order-summary-item pt-3 border-top">
+                                <div class="d-flex justify-content-between fw-bold fs-5">
+                                    <span>Total</span>
+                                    <span class="text-primary">₹<span id="total-amount">{{ "%.2f"|format(total) }}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Terms & Conditions -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agree-terms" required>
+                                <label class="form-check-label small" for="agree-terms">
+                                    I agree to the 
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
+                                    and have read the 
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Privacy Policy</a>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Place Order Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="place-order-btn">
+                                <i class="fas fa-lock me-2"></i>Place Order
+                            </button>
+                        </div>
+                        
+                        <!-- Security Assurance -->
+                        <div class="text-center mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Secure checkout · 256-bit SSL encryption
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Add Address Modal -->
+<div class="modal fade" id="addAddressModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Address</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="new-address-form">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" name="full_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Address Line 1</label>
+                            <input type="text" class="form-control" name="address_line1" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Address Line 2 (Optional)</label>
+                            <input type="text" class="form-control" name="address_line2">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" name="city" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">State</label>
+                            <input type="text" class="form-control" name="state" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Postal Code</label>
+                            <input type="text" class="form-control" name="postal_code" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" name="country" value="India" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_default" id="set-default">
+                                <label class="form-check-label" for="set-default">
+                                    Set as default address
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-address">Save Address</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Addresses Modal -->
+<div class="modal fade" id="manageAddressModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manage Addresses</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="address-management">
+                    {% for address in addresses %}
+                    <div class="card mb-3 address-manage-card" data-address-id="{{ address.id }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ address.full_name }}</h6>
+                                    <p class="small mb-1 text-muted">
+                                        {{ address.address_line1 }}{% if address.address_line2 %}, {{ address.address_line2 }}{% endif %}<br>
+                                        {{ address.city }}, {{ address.state }} - {{ address.postal_code }}<br>
+                                        {{ address.country }}
+                                    </p>
+                                    <p class="small mb-0">
+                                        <i class="fas fa-phone"></i> {{ address.phone }}
+                                    </p>
+                                    {% if address.is_default %}
+                                    <span class="badge bg-primary mt-2">Default Address</span>
+                                    {% endif %}
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary edit-address">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger delete-address">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Terms and Conditions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Order Acceptance</h6>
+                <p>All orders are subject to acceptance and availability. We reserve the right to refuse any order.</p>
+                
+                <h6>2. Pricing and Payment</h6>
+                <p>Prices are subject to change without notice. Payment must be made in full before dispatch.</p>
+                
+                <h6>3. Shipping and Delivery</h6>
+                <p>Delivery times are estimates and not guaranteed. We are not liable for delays beyond our control.</p>
+                
+                <h6>4. Returns and Refunds</h6>
+                <p>Returns are accepted within 30 days of delivery, subject to our return policy.</p>
+                
+                <h6>5. Privacy</h6>
+                <p>Your personal information is protected according to our Privacy Policy.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Privacy Policy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Data Collection</h6>
+                <p>We collect information necessary to process your orders and improve your shopping experience.</p>
+                
+                <h6>Data Usage</h6>
+                <p>Your data is used for order processing, customer support, and personalized recommendations.</p>
+                
+                <h6>Data Protection</h6>
+                <p>We implement industry-standard security measures to protect your personal information.</p>
+                
+                <h6>Third-Party Services</h6>
+                <p>We may share data with trusted partners for payment processing and shipping.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Address selection
+    document.querySelectorAll('.address-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selection from all cards
+            document.querySelectorAll('.address-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+            
+            // Select this card
+            this.classList.add('selected');
+            
+            // Update hidden input
+            const addressId = this.dataset.addressId;
+            document.getElementById('selected-address').value = addressId;
+        });
+    });
+    
+    // Payment method selection
+    document.querySelectorAll('.payment-method-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selection from all cards
+            document.querySelectorAll('.payment-method-card').forEach(c => {
+                c.classList.remove('selected');
+            });
+            
+            // Select this card
+            this.classList.add('selected');
+            
+            // Update hidden input
+            const paymentMethod = this.dataset.paymentMethod;
+            document.getElementById('selected-payment').value = paymentMethod;
+            
+            // Show/hide payment details
+            const paymentDetails = document.getElementById('online-payment-details');
+            if (paymentMethod === 'online') {
+                paymentDetails.classList.remove('d-none');
+            } else {
+                paymentDetails.classList.add('d-none');
+            }
+        });
+    });
+    
+    // Save new address
+    document.getElementById('save-address').addEventListener('click', async function() {
+        const form = document.getElementById('new-address-form');
+        const formData = new FormData(form);
+        
+        // Validate
+        let isValid = true;
+        form.querySelectorAll('[required]').forEach(input => {
+            if (!input.value.trim()) {
+                input.classList.add('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            showNotification('Please fill all required fields', 'error');
+            return;
+        }
+        
+        // Prepare data
+        const data = {
+            full_name: formData.get('full_name'),
+            phone: formData.get('phone'),
+            address_line1: formData.get('address_line1'),
+            address_line2: formData.get('address_line2'),
+            city: formData.get('city'),
+            state: formData.get('state'),
+            postal_code: formData.get('postal_code'),
+            country: formData.get('country'),
+            is_default: formData.get('is_default') === 'on'
+        };
+        
+        // Show loading
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+        
+        try {
+            const response = await fetch('/cart/address/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Close modal and refresh page
+                bootstrap.Modal.getInstance(document.getElementById('addAddressModal')).hide();
+                showNotification('Address added successfully', 'success');
+                
+                // Reload page after 1 second
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                throw new Error(result.message || 'Failed to save address');
+            }
+            
+        } catch (error) {
+            console.error('Error saving address:', error);
+            showNotification(error.message || 'Failed to save address', 'error');
+            this.disabled = false;
+            this.innerHTML = 'Save Address';
+        }
+    });
+    
+    // Apply coupon
+    document.getElementById('apply-coupon').addEventListener('click', async function() {
+        const couponCode = document.getElementById('coupon-code').value.trim();
+        const messageEl = document.getElementById('coupon-message');
+        
+        if (!couponCode) {
+            messageEl.innerHTML = '<span class="text-danger">Please enter a coupon code</span>';
+            return;
+        }
+        
+        // Show loading
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        try {
+            const response = await fetch('/api/coupon/apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ code: couponCode })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Update order summary
+                updateOrderSummary(result.discount);
+                
+                // Show success message
+                messageEl.innerHTML = `
+                    <span class="coupon-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Coupon applied! You saved ₹${result.discount.toFixed(2)}
+                    </span>
+                `;
+                
+                // Store coupon in localStorage
+                localStorage.setItem('applied_coupon', JSON.stringify({
+                    code: couponCode,
+                    discount: result.discount
+                }));
+                
+            } else {
+                throw new Error(result.message || 'Invalid coupon code');
+            }
+            
+        } catch (error) {
+            console.error('Error applying coupon:', error);
+            messageEl.innerHTML = `
+                <span class="coupon-error">
+                    <i class="fas fa-times-circle me-1"></i>
+                    ${error.message}
+                </span>
+            `;
+        } finally {
+            this.disabled = false;
+            this.innerHTML = 'Apply';
+        }
+    });
+    
+    // Update order summary with discount
+    function updateOrderSummary(discount) {
+        const discountRow = document.getElementById('discount-row');
+        const discountAmount = document.getElementById('discount-amount');
+        const totalAmount = document.getElementById('total-amount');
+        
+        // Show discount row
+        discountRow.style.display = 'block';
+        discountAmount.textContent = discount.toFixed(2);
+        
+        // Calculate new total
+        const currentTotal = parseFloat('{{ total }}');
+        const newTotal = currentTotal - discount;
+        
+        // Update total
+        totalAmount.textContent = newTotal.toFixed(2);
+    }
+    
+    // Form submission
+    document.getElementById('checkout-form').addEventListener('submit', function(e) {
+        const agreeTerms = document.getElementById('agree-terms').checked;
+        const addressSelected = document.getElementById('selected-address').value;
+        
+        if (!agreeTerms) {
+            e.preventDefault();
+            showNotification('Please agree to the terms and conditions', 'error');
+            document.getElementById('agree-terms').focus();
+            return;
+        }
+        
+        if (!addressSelected) {
+            e.preventDefault();
+            showNotification('Please select a shipping address', 'error');
+            return;
+        }
+        
+        // Show loading on button
+        const submitBtn = document.getElementById('place-order-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+    });
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+    
+    // Load applied coupon from localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedCoupon = localStorage.getItem('applied_coupon');
+        if (savedCoupon) {
+            const coupon = JSON.parse(savedCoupon);
+            document.getElementById('coupon-code').value = coupon.code;
+            updateOrderSummary(coupon.discount);
+            
+            document.getElementById('coupon-message').innerHTML = `
+                <span class="coupon-success">
+                    <i class="fas fa-check-circle me-1"></i>
+                    Coupon applied! You saved ₹${coupon.discount.toFixed(2)}
+                </span>
+            `;
+        }
+    });
+    
+    // Validate phone number
+    document.querySelectorAll('input[type="tel"]').forEach(input => {
+        input.addEventListener('input', function() {
+            const phone = this.value.replace(/\D/g, '');
+            if (phone.length > 10) {
+                this.value = phone.substring(0, 10);
+            }
+        });
+    });
+    
+    // Validate postal code
+    document.querySelectorAll('input[name="postal_code"]').forEach(input => {
+        input.addEventListener('input', function() {
+            const postal = this.value.replace(/\D/g, '');
+            if (postal.length > 6) {
+                this.value = postal.substring(0, 6);
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+
+{% block title %}Order Status Update - AutoSpareHub{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    
+    .status-timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 30px;
+        width: 3px;
+        background: #e9ecef;
+        border-radius: 3px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 60px;
+        margin-bottom: 30px;
+    }
+    
+    .timeline-item.completed .timeline-icon {
+        background: #28a745;
+        color: white;
+    }
+    
+    .timeline-item.current .timeline-icon {
+        background: #0A1F44;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    .timeline-item.pending .timeline-icon {
+        background: #e9ecef;
+        color: #6c757d;
+    }
+    
+    .timeline-icon {
+        position: absolute;
+        left: 15px;
+        top: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 1;
+    }
+    
+    .timeline-content {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .tracking-number {
+        background: #f8f9fa;
+        border-radius: 20px;
+        padding: 5px 15px;
+        font-family: monospace;
+        font-size: 0.9rem;
+    }
+    
+    .delivery-map {
+        border-radius: 10px;
+        overflow: hidden;
+        background: #f8f9fa;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .estimated-delivery {
+        background: linear-gradient(135deg, #0A1F44 0%, #1a2f5d 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(10, 31, 68, 0.7);
+        }
+        70% {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 10px rgba(10, 31, 68, 0);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(10, 31, 68, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Header -->
+            <div class="text-center mb-5">
+                <div class="mb-3">
+                    <i class="fas fa-shipping-fast fa-3x text-primary"></i>
+                </div>
+                <h1 class="mb-3">Order Status Update</h1>
+                <p class="lead text-muted">
+                    Track your order #{{ order.order_number }} in real-time
+                </p>
+            </div>
+            
+            <!-- Order Summary Card -->
+            <div class="card mb-5 border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center mb-3 mb-md-0">
+                            <div class="order-status-badge">
+                                <span class="badge status-{{ order.order_status }} py-2 px-3 fs-6">
+                                    {{ order.order_status|title }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <small class="text-muted d-block">Order Number</small>
+                                    <strong class="fs-5">{{ order.order_number }}</strong>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <small class="text-muted d-block">Order Date</small>
+                                    <strong>{{ order.created_at.strftime('%d %b, %Y') }}</strong>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <small class="text-muted d-block">Total Amount</small>
+                                    <strong class="fs-5 text-primary">₹{{ "%.2f"|format(order.total_amount) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- Status Timeline -->
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-map-marker-alt me-2"></i>Order Journey
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="status-timeline">
+                                <!-- Order Placed -->
+                                <div class="timeline-item completed">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Order Placed</h6>
+                                            <small class="text-muted">{{ order.created_at.strftime('%d %b, %I:%M %p') }}</small>
+                                        </div>
+                                        <p class="text-muted small mb-0">
+                                            Your order has been successfully placed and is being processed.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Order Confirmed -->
+                                <div class="timeline-item {% if order.order_status in ['confirmed', 'packed', 'shipped', 'delivered'] %}completed{% elif order.order_status == 'pending' %}current{% else %}pending{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Order Confirmed</h6>
+                                            <small class="text-muted">
+                                                {% if order.order_status in ['confirmed', 'packed', 'shipped', 'delivered'] %}
+                                                    {{ order.created_at.strftime('%d %b, %I:%M %p') }}
+                                                {% elif order.order_status == 'pending' %}
+                                                    In progress
+                                                {% else %}
+                                                    Pending
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <p class="text-muted small mb-0">
+                                            We've received your order and are preparing it for shipment.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Order Packed -->
+                                <div class="timeline-item {% if order.order_status in ['packed', 'shipped', 'delivered'] %}completed{% elif order.order_status == 'confirmed' %}current{% else %}pending{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-box"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Packed</h6>
+                                            <small class="text-muted">
+                                                {% if order.order_status in ['packed', 'shipped', 'delivered'] %}
+                                                    Estimated: {{ (order.created_at + timedelta(hours=2)).strftime('%d %b, %I:%M %p') }}
+                                                {% elif order.order_status == 'confirmed' %}
+                                                    In progress
+                                                {% else %}
+                                                    Pending
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <p class="text-muted small mb-0">
+                                            Your items have been carefully packed and are ready for shipping.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Order Shipped -->
+                                <div class="timeline-item {% if order.order_status in ['shipped', 'delivered'] %}completed{% elif order.order_status == 'packed' %}current{% else %}pending{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-shipping-fast"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Shipped</h6>
+                                            <small class="text-muted">
+                                                {% if order.order_status in ['shipped', 'delivered'] %}
+                                                    {% if order.tracking_number %}
+                                                        Tracking: {{ order.tracking_number }}
+                                                    {% else %}
+                                                        In transit
+                                                    {% endif %}
+                                                {% elif order.order_status == 'packed' %}
+                                                    Next step
+                                                {% else %}
+                                                    Pending
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <p class="text-muted small mb-0">
+                                            Your order is on the way! 
+                                            {% if order.tracking_number %}
+                                            <span class="tracking-number d-inline-block ms-2">{{ order.tracking_number }}</span>
+                                            {% endif %}
+                                        </p>
+                                        {% if order.tracking_number %}
+                                        <div class="mt-3">
+                                            <a href="https://www.fedex.com/fedextrack/?trknbr={{ order.tracking_number }}" 
+                                               target="_blank" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-external-link-alt me-2"></i>Track on Carrier Website
+                                            </a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Order Delivered -->
+                                <div class="timeline-item {% if order.order_status == 'delivered' %}completed{% elif order.order_status == 'shipped' %}current{% else %}pending{% endif %}">
+                                    <div class="timeline-icon">
+                                        <i class="fas fa-home"></i>
+                                    </div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="mb-0">Delivered</h6>
+                                            <small class="text-muted">
+                                                {% if order.order_status == 'delivered' %}
+                                                    {{ (order.created_at + timedelta(days=3)).strftime('%d %b, %Y') }}
+                                                {% elif order.order_status == 'shipped' %}
+                                                    Estimated: {{ (order.created_at + timedelta(days=3)).strftime('%d %b, %Y') }}
+                                                {% else %}
+                                                    Pending
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <p class="text-muted small mb-0">
+                                            Your order has been delivered successfully.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Delivery Map -->
+                    {% if order.order_status in ['shipped', 'delivered'] %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-map me-2"></i>Delivery Route
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="delivery-map">
+                                <div class="text-center p-4">
+                                    <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
+                                    <h5>Live Tracking Unavailable</h5>
+                                    <p class="text-muted">
+                                        Real-time tracking is currently not available for this shipment.
+                                    </p>
+                                    <button class="btn btn-outline-primary" onclick="checkCarrierTracking()">
+                                        <i class="fas fa-sync-alt me-2"></i>Check Carrier Updates
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Sidebar Info -->
+                <div class="col-lg-4">
+                    <!-- Estimated Delivery -->
+                    <div class="estimated-delivery mb-4">
+                        <h5 class="text-white mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>Estimated Delivery
+                        </h5>
+                        <div class="text-center">
+                            <div class="display-4 text-white mb-2">
+                                {{ (order.created_at + timedelta(days=3)).strftime('%d') }}
+                            </div>
+                            <div class="text-white-75">
+                                {{ (order.created_at + timedelta(days=3)).strftime('%B %Y') }}
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-white-75">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ (order.created_at + timedelta(days=3)).strftime('%A') }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="progress" style="height: 8px;">
+                                {% if order.order_status == 'pending' %}
+                                <div class="progress-bar bg-warning" style="width: 20%"></div>
+                                {% elif order.order_status == 'confirmed' %}
+                                <div class="progress-bar bg-info" style="width: 40%"></div>
+                                {% elif order.order_status == 'packed' %}
+                                <div class="progress-bar bg-primary" style="width: 60%"></div>
+                                {% elif order.order_status == 'shipped' %}
+                                <div class="progress-bar bg-success" style="width: 80%"></div>
+                                {% elif order.order_status == 'delivered' %}
+                                <div class="progress-bar bg-success" style="width: 100%"></div>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-white-75">Ordered</small>
+                                <small class="text-white-75">Delivered</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Shipping Address -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-truck me-2"></i>Shipping To
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <address class="mb-0">
+                                <strong>{{ order.address.full_name }}</strong><br>
+                                {{ order.address.address_line1 }}<br>
+                                {% if order.address.address_line2 %}
+                                {{ order.address.address_line2 }}<br>
+                                {% endif %}
+                                {{ order.address.city }}, {{ order.address.state }}<br>
+                                {{ order.address.postal_code }}<br>
+                                {{ order.address.country }}<br>
+                                <i class="fas fa-phone me-1"></i> {{ order.address.phone }}
+                            </address>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-cog me-2"></i>Actions
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('user.order_detail', order_id=order.id) }}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="fas fa-file-invoice me-2"></i>View Order Details
+                                </a>
+                                <button class="btn btn-outline-secondary" onclick="printOrder()">
+                                    <i class="fas fa-print me-2"></i>Print Details
+                                </button>
+                                <button class="btn btn-outline-success" onclick="shareOrder()">
+                                    <i class="fas fa-share-alt me-2"></i>Share Status
+                                </button>
+                                {% if order.order_status != 'delivered' %}
+                                <button class="btn btn-warning" onclick="requestSupport()">
+                                    <i class="fas fa-headset me-2"></i>Need Help?
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Updates -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-history me-2"></i>Recent Updates
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>Description</th>
+                                    <th>Location</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for history in order.get_status_timeline() %}
+                                <tr>
+                                    <td>{{ history.timestamp.strftime('%d %b, %I:%M %p') }}</td>
+                                    <td>
+                                        <span class="badge status-{{ history.status }}">
+                                            {{ history.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ history.notes or 'Status updated' }}</td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {% if history.status == 'shipped' %}Distribution Center{% endif %}
+                                            {% if history.status == 'delivered' %}Delivery Location{% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-refresh status every 30 seconds
+    let refreshInterval;
+    
+    function startAutoRefresh() {
+        refreshInterval = setInterval(() => {
+            fetchOrderStatus();
+        }, 30000); // 30 seconds
+    }
+    
+    function stopAutoRefresh() {
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+    }
+    
+    async function fetchOrderStatus() {
+        try {
+            const response = await fetch(`/api/order/{{ order.id }}/status`);
+            const data = await response.json();
+            
+            if (data.status !== '{{ order.order_status }}') {
+                // Status changed, show notification and reload
+                showNotification('Order status updated!', 'info');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Error fetching order status:', error);
+        }
+    }
+    
+    // Start auto-refresh
+    document.addEventListener('DOMContentLoaded', function() {
+        if ('{{ order.order_status }}' !== 'delivered' && '{{ order.order_status }}' !== 'cancelled') {
+            startAutoRefresh();
+        }
+        
+        // Stop auto-refresh when tab is not visible
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                startAutoRefresh();
+            }
+        });
+    });
+    
+    // Print order details
+    function printOrder() {
+        const printContent = `
+            <html>
+            <head>
+                <title>Order {{ order.order_number }} - AutoSpareHub</title>
+                <style>
+                    body { font-family: Arial, sans-serif; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .order-info { margin-bottom: 20px; }
+                    .table { width: 100%; border-collapse: collapse; }
+                    .table th, .table td { border: 1px solid #ddd; padding: 8px; }
+                    .table th { background: #f8f9fa; }
+                    .status-timeline { margin: 20px 0; }
+                    .timeline-item { margin-bottom: 15px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h2>AutoSpareHub - Order Tracking</h2>
+                    <h3>Order #{{ order.order_number }}</h3>
+                </div>
+                
+                <div class="order-info">
+                    <p><strong>Status:</strong> {{ order.order_status|title }}</p>
+                    <p><strong>Order Date:</strong> {{ order.created_at.strftime('%d %B, %Y') }}</p>
+                    <p><strong>Estimated Delivery:</strong> {{ (order.created_at + timedelta(days=3)).strftime('%d %B, %Y') }}</p>
+                    {% if order.tracking_number %}
+                    <p><strong>Tracking Number:</strong> {{ order.tracking_number }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="status-timeline">
+                    <h4>Order Journey</h4>
+                    {% for history in order.get_status_timeline() %}
+                    <div class="timeline-item">
+                        <strong>{{ history.timestamp.strftime('%d %b, %I:%M %p') }}</strong>
+                        <br>{{ history.status|title }} - {{ history.notes or 'Status updated' }}
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="shipping-info">
+                    <h4>Shipping Address</h4>
+                    <p>{{ order.address.full_name }}<br>
+                    {{ order.address.address_line1 }}<br>
+                    {% if order.address.address_line2 %}{{ order.address.address_line2 }}<br>{% endif %}
+                    {{ order.address.city }}, {{ order.address.state }} {{ order.address.postal_code }}<br>
+                    {{ order.address.country }}<br>
+                    Phone: {{ order.address.phone }}</p>
+                </div>
+                
+                <p class="footer">
+                    Printed on: ${new Date().toLocaleString()}<br>
+                    AutoSpareHub - support@autosparehub.com
+                </p>
+            </body>
+            </html>
+        `;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    // Share order status
+    function shareOrder() {
+        const orderData = {
+            title: `Order #{{ order.order_number }} Status - AutoSpareHub`,
+            text: `Track my order #{{ order.order_number }} on AutoSpareHub. Current status: {{ order.order_status|title }}`,
+            url: window.location.href
+        };
+        
+        if (navigator.share) {
+            navigator.share(orderData)
+                .then(() => console.log('Order shared successfully'))
+                .catch(error => console.log('Error sharing:', error));
+        } else {
+            // Fallback: Copy to clipboard
+            const text = `Order #{{ order.order_number }}\nStatus: {{ order.order_status|title }}\nTrack here: ${window.location.href}`;
+            navigator.clipboard.writeText(text)
+                .then(() => showNotification('Link copied to clipboard!', 'success'))
+                .catch(err => showNotification('Failed to copy link', 'error'));
+        }
+    }
+    
+    // Request support
+    function requestSupport() {
+        const modalHtml = `
+            <div class="modal fade" id="supportModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Need Help with Your Order?</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="supportForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Issue Type</label>
+                                    <select class="form-select" required>
+                                        <option value="">Select issue type</option>
+                                        <option value="delayed">Delivery Delayed</option>
+                                        <option value="damaged">Damaged Product</option>
+                                        <option value="wrong">Wrong Item Received</option>
+                                        <option value="tracking">Tracking Not Working</option>
+                                        <option value="other">Other Issue</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" rows="4" 
+                                              placeholder="Please describe your issue..." required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Contact Preference</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="contact" value="email" checked>
+                                        <label class="form-check-label">Email</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="contact" value="phone">
+                                        <label class="form-check-label">Phone Call</label>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="submitSupportRequest()">Submit Request</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        const modalDiv = document.createElement('div');
+        modalDiv.innerHTML = modalHtml;
+        document.body.appendChild(modalDiv);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('supportModal'));
+        modal.show();
+        
+        // Clean up after modal closes
+        modalDiv.addEventListener('hidden.bs.modal', function() {
+            modalDiv.remove();
+        });
+    }
+    
+    function submitSupportRequest() {
+        // In a real implementation, this would submit to the server
+        showNotification('Support request submitted successfully!', 'success');
+        document.getElementById('supportModal').remove();
+    }
+    
+    function checkCarrierTracking() {
+        if ('{{ order.tracking_number }}') {
+            window.open(`https://www.fedex.com/fedextrack/?trknbr={{ order.tracking_number }}`, '_blank');
+        } else {
+            showNotification('No tracking number available for this order', 'warning');
+        }
+    }
+    
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} alert-dismissible fade show`;
+        notification.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 300px;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-dismiss
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+</script>
+{% endblock %}
